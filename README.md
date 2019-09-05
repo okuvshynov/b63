@@ -17,7 +17,7 @@ run benchmarks from examples/ folder. The library is header-only, so the only 'd
 - b63.h header
 - individual counter headers.
 
-For example, this is how 'benchmarking' cpu cycles and cache misses might look like:
+For example, this is how 'benchmarking' time, cpu cycles and cache misses might look like on Linux:
 
 ```cpp
 #include "../src/b63.h"
@@ -31,8 +31,21 @@ For example, this is how 'benchmarking' cpu cycles and cache misses might look l
 
 const size_t kSize = (1 << 16);
 const size_t kMask = kSize - 1;
+
+/* 
+ * B63_BASELINE defines a 'baseline' function to benchmark.
+ * In this definition, 'sequential' is benchmark name,
+ * and 'n' is the parameter the function needs to use as 
+ * 'how many iterations to run'. It is important to have this parameter
+ * to be able to adjust the runtime dynamically
+ */
 B63_BASELINE(sequential, n) {
   std::vector<uint32_t> v;
+
+  /* 
+   * Code within 'B63_SUSPEND' will not be counted
+   * towards benchmark score.
+   */
   B63_SUSPEND {
     v.resize(kSize);
     std::iota(v.begin(), v.end(), 0);
@@ -43,8 +56,13 @@ B63_BASELINE(sequential, n) {
       res += v[j];
     }
   }
+  /* this is to prevent compiler from optimizing res out */
   B63_KEEP(res);
 }
+
+/*
+ * This is another benchmark, which will be 'compared' to baseline
+ */
 B63_BENCHMARK(random, n) {
   std::vector<uint32_t> v;
   B63_SUSPEND {
@@ -59,22 +77,42 @@ B63_BENCHMARK(random, n) {
   }
   B63_KEEP(res);
 }
+
 int main(int argc, char **argv) {
   srand(time(0));
-  B63_RUN_WITH("lpe:cycles,lpe:LLC-load-misses,lpe:L1-dcache-load-misses", argc, argv);
+  /* 
+   * this call starts benchmarking.
+   * List of 'counters' to measure is passed explicitly here,
+   * but one can provide command-line flag -c to override.
+   * In this case, we are measuring 4 counters:
+   *  * lpe:cycles - CPU cycles spent in benchmark (outside of B63_SUSPEND), as measured with Linux perf_events.
+   *  * lpe:LLC-load-misses - CPU last level cache (typically L3 these days) misses during benchmark run (outside of B63_SUSPEND).
+   *  * lpe:L1-dcache-load-misses - CPU L1 Data cache misses during benchmark run
+   *  * time - wall time.
+   */
+  B63_RUN_WITH("time,lpe:cycles,lpe:LLC-load-misses,lpe:L1-dcache-load-misses", argc, argv);
   return 0;
 }
 ```
 
+Build and run:
+
 This is the output of the sample run:
 ```
-[DONE] sequential                    : lpe:cycles : 131844.167277 per iteration (baseline)
-[DONE] random                        : lpe:cycles : 372029.754763 per iteration (+182.174%)
-[DONE] sequential                    : lpe:LLC-load-misses : 0.000488 per iteration (baseline)
-[DONE] random                        : lpe:LLC-load-misses : 0.003908 per iteration (+700.195%)
-[DONE] sequential                    : lpe:L1-dcache-load-misses : 5263.337485 per iteration (baseline)
-[DONE] random                        : lpe:L1-dcache-load-misses : 81347.234978 per iteration (+1445.545%)
+$ g++ -O3 bm.cpp -o bm
+$ ./bm -i # i for 'interactive'
+[DONE] sequential                    : time : 52495.468864 per iteration (baseline)
+[DONE] random                        : time : 147816.263801 per iteration (+181.579%)
+[DONE] sequential                    : lpe:cycles : 131864.811233 per iteration (baseline)
+[DONE] random                        : lpe:cycles : 370943.605765 per iteration (+181.306%)
+[DONE] sequential                    : lpe:LLC-load-misses : 0.002442 per iteration (baseline)
+[DONE] random                        : lpe:LLC-load-misses : 0.007328 per iteration (+200.073%)
+[DONE] sequential                    : lpe:L1-dcache-load-misses : 4410.444933 per iteration (baseline)
+[DONE] random                        : lpe:L1-dcache-load-misses : 80459.789448 per iteration (+1724.301%)
 ```
+Currently B63 repeats the run for every counter to reduce side-effects of measurement. This might change in future.
+The way to read the results: for benchmark 'sequential', which is baseline version, we spent 52 milliseconds per 'iteration', there were only a tiny amount of LLC load misses, because entire dataset fits into L3 cache, and some number of L1 cache misses.
+For 'random' version, we see clear increase in time and equivalent increase in CPU cycles (+181%), and a very prominent increase in L1 cache misses.
 
 Extra examples can be found in examples/ folder:
 1. Measuring time / iteration ([examples/basic.c](examples/basic.c)):
@@ -180,7 +218,7 @@ $ ./_build/bm_suspend -i
 [DONE] basic                         : time : 71.967727 per iteration
 ```
 
-The way to interpret it is: 'with_suspend' is equivalent in 'non-suspended' time, thus the time/iteration is very close. However, the suspended activity takes a while, so we had to run fewer iterations overall.
+The way to interpret it is: 'with_suspend' is equivalent in 'non-suspended' time, thus the time/iteration is very close. However, the suspended activity takes a while, so we had to run fewer iterations overall. There's a set of counters already built:
 
 ### Linux perf_events ("lpe:...")
 The acronym used is 'lpe'.
