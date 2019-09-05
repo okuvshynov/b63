@@ -4,7 +4,7 @@ Light-weight micro-benchmarking tool for C.
 
 ## Motivation
 Why was it built, given that quite a few already exist?
-- quick and easy benchmarking for C, which resembles C++ libraries like [google benchmark](https://github.com/google/benchmark) or [folly/benchmark](https://github.com/facebook/folly/blob/master/folly/docs/Benchmark.md);
+- quick and easy benchmarking for C, not C++ only;
 - benchmarking is usually associated with measuring wall time, CPU time or CPU cycles. I needed other 'counters' as well, specifically:
   - completely custom measurements, like 'number of hash collisions';
   - CPU Performance Monitoring Unit counters, like the number of cache misses and branch mispredictions;
@@ -37,13 +37,13 @@ const size_t kMask = kSize - 1;
  * In this definition, 'sequential' is benchmark name,
  * and 'n' is the parameter the function needs to use as 
  * 'how many iterations to run'. It is important to have this parameter
- * to be able to adjust the runtime dynamically
+ * to be able to adjust the run time dynamically
  */
 B63_BASELINE(sequential, n) {
   std::vector<uint32_t> v;
 
   /* 
-   * Code within 'B63_SUSPEND' will not be counted
+   * Anything within 'B63_SUSPEND' will not be counted
    * towards benchmark score.
    */
   B63_SUSPEND {
@@ -87,8 +87,8 @@ int main(int argc, char **argv) {
    * In this case, we are measuring 4 counters:
    *  * lpe:cycles - CPU cycles spent in benchmark (outside of B63_SUSPEND), as measured with Linux perf_events.
    *  * lpe:LLC-load-misses - CPU last level cache (typically L3 these days) misses during benchmark run (outside of B63_SUSPEND).
-   *  * lpe:L1-dcache-load-misses - CPU L1 Data cache misses during benchmark run
-   *  * time - wall time.
+   *  * lpe:L1-dcache-load-misses - CPU L1 Data cache misses during benchmark run (outside of B63_SUSPEND)
+   *  * time - wall time (outside of B63_SUSPEND)
    */
   B63_RUN_WITH("time,lpe:cycles,lpe:LLC-load-misses,lpe:L1-dcache-load-misses", argc, argv);
   return 0;
@@ -110,18 +110,18 @@ $ ./bm -i # i for 'interactive'
 [DONE] sequential                    : lpe:L1-dcache-load-misses : 4410.444933 per iteration (baseline)
 [DONE] random                        : lpe:L1-dcache-load-misses : 80459.789448 per iteration (+1724.301%)
 ```
-Currently B63 repeats the run for every counter to reduce side-effects of measurement. This might change in future.
-The way to read the results: for benchmark 'sequential', which is baseline version, we spent 52 milliseconds per 'iteration', there were only a tiny amount of LLC load misses, because entire dataset fits into L3 cache, and some number of L1 cache misses.
-For 'random' version, we see clear increase in time and equivalent increase in CPU cycles (+181%), and a very prominent increase in L1 cache misses.
+Currently B63 repeats the run for every counter to reduce side-effects of measurement, but this might change in the future.
+The way to read the results: for benchmark 'sequential', which is baseline version, we spent 52 milliseconds per 'iteration', there were only a tiny amount of LLC load misses, because entire dataset fits into L3 cache;
+For 'random' version, we see clear increase in time and equivalent increase in CPU cycles (+181%), and a very prominent increase in L1 cache misses (+1724%).
 
 Extra examples can be found in examples/ folder:
 1. Measuring time / iteration ([examples/basic.c](examples/basic.c)):
 2. Suspending tracking ([examples/suspend.c](examples/suspend.c)):
-3. Compare implementations ([examples/baseline.c](examples/baseline.c)):
+3. Comparing implementations with baseline ([examples/baseline.c](examples/baseline.c)):
 4. Using custom counter, number of function calls in this case ([examples/custom.c](examples/custom.c))
 5. Using cache miss counter from linux perf event ([examples/l1d_miss.cpp](examples/l1d_miss.cpp))
-6. Raw counter from linux perf event ([examples/raw.c](examples/raw.c)):
-7. jemalloc allocation stats ([examples/jemalloc.cpp](examples/jemalloc.cpp))
+6. Using raw counter from linux perf event ([examples/raw.c](examples/raw.c)):
+7. Measuring jemalloc allocation stats ([examples/jemalloc.cpp](examples/jemalloc.cpp))
 
 ## Overview
 The library consists of a core part responsible for running the benchmarks, and pluggable 'counters'. The library is header-only, thus, there isn't much 'encapsulation' going on.  Every global symbol is prefixed with b63\_.
@@ -134,41 +134,8 @@ Main internal data structures are:
 5) b63_counter_list. Set of all counters to run benchmarks for.
 6) b63_run. Individual benchmark execution.
 
-## Dependencies and compatibility
-
-B63 requires following C compiler attributes available:
-- cleanup
-- used
-- section
-
-Reasonably recent GCC and Clang have them, but I'm not sure which versions started supporting them.
-
-Individual counters can have specific requirements. For example, Linux perf_events, not surprisingly,
-will only work on Linux, jemalloc counter will only work/make sense if memory allocation is done via jemalloc.
-
-### Tested On
-1. MacBook Pro 2019
-  - OS: MacOS 10.14.6 (x86_64-apple-darwin18.7.0)
-  - CPU: Intel(R) Core(TM) i5-8257U
-  - Compiler: clang-1001.0.46.4 (Apple LLVM)
-2. MacBook Pro 2009 
-  - OS: Ubuntu 18.04.3 (Kernel: 4.15.0-58)
-  - CPU: Intel(R) Core(TM) 2 Duo P8700
-  - Compiler: GCC 7.4.0
-3. Paspberry PI
-  - OS: Raspbian GNU/Linux 9 (Kernel: 4.14.71-v7+)
-  - CPU: ARMv7 Processor rev 4 (v7l)
-  - Compiler: GCC 6.3.0
-4. [VM] FreeBSD
-  - OS: FreeBSD 12.0
-  - Compiler: FreeBSD clang 6.0.1
-5. MacMini 2007
-  - OS: Ubuntu 11.10 (Kernel: 3.0.0-13-generic)
-  - CPU: Intel(R) Core(TM)2 CPU T5600
-  - Compiler: GCC 4.6.1
-  - Caveats:
-    - requires -lrt flag, as POSIX realtime extension are not (yet) in libc.
-    - ref-cycles event from linux perf_events is not supported.
+## Comparison and baselines
+Within the benchmark suite, there's a way to define 'baseline', and compare all other benchmarks against it. Comparison is very naive at the moment: it runs benchmarks for a few epochs, picks the best one and compares. This is ~reasonable way to deal with noise. Maybe we could support passing some seed around, making each epoch run 'reproducible' and do a more comprehensive comparison, like paired t-test.
 
 ## Output Modes
 Two output modes are supported:
@@ -237,8 +204,41 @@ $ ./bm_jemalloc -c jemalloc_thread_allocated
 ### Time ("time")
 Default counter, uses CLOCK_MONOTONIC, counts microseconds.
 
-## Comparison and baselines
-Within the benchmark individual run, there's a way to define 'baseline', and compare all other benchmarks against it. Comparison is very naive at the moment: it runs benchmarks for a few epochs, picks the best one and compares. This is ~reasonable way to deal with noise. Maybe later we could support passing some seed around, making each epoch run 'reproducible' and do a more comprehensive comparison, like paired t-test.
+## Dependencies and compatibility
+
+B63 requires following C compiler attributes available:
+- cleanup
+- used
+- section
+
+Reasonably recent GCC and Clang have them, but I'm not sure which versions started supporting them.
+
+Individual counters can have specific requirements. For example, Linux perf_events, not surprisingly,
+will only work on Linux, jemalloc counter will only work/make sense if memory allocation is done via jemalloc.
+
+### Tested On
+1. MacBook Pro 2019
+  - OS: MacOS 10.14.6 (x86_64-apple-darwin18.7.0)
+  - CPU: Intel(R) Core(TM) i5-8257U
+  - Compiler: clang-1001.0.46.4 (Apple LLVM)
+2. MacBook Pro 2009 
+  - OS: Ubuntu 18.04.3 (Kernel: 4.15.0-58)
+  - CPU: Intel(R) Core(TM) 2 Duo P8700
+  - Compiler: GCC 7.4.0
+3. Paspberry PI
+  - OS: Raspbian GNU/Linux 9 (Kernel: 4.14.71-v7+)
+  - CPU: ARMv7 Processor rev 4 (v7l)
+  - Compiler: GCC 6.3.0
+4. [VM] FreeBSD
+  - OS: FreeBSD 12.0
+  - Compiler: FreeBSD clang 6.0.1
+5. MacMini 2007
+  - OS: Ubuntu 11.10 (Kernel: 3.0.0-13-generic)
+  - CPU: Intel(R) Core(TM)2 CPU T5600
+  - Compiler: GCC 4.6.1
+  - Caveats:
+    - requires -lrt flag, as POSIX realtime extension are not (yet) in libc.
+    - ref-cycles event from linux perf_events is not supported.
 
 ## Next steps:
 - a convenient way to measure outliers. For example, as hash maps usually have amortized O(1) cost for lookup, what does p99 lookup time looks like for some lookup distribution? What can be done to improve?
