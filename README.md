@@ -123,17 +123,6 @@ Extra examples can be found in examples/ folder:
 6. Using raw counter from linux perf event ([examples/raw.c](examples/raw.c)):
 7. Measuring jemalloc allocation stats ([examples/jemalloc.cpp](examples/jemalloc.cpp))
 
-## Overview
-The library consists of a core part responsible for running the benchmarks, and pluggable 'counters'. The library is header-only, thus, there isn't much 'encapsulation' going on.  Every global symbol is prefixed with b63\_.
-
-Main internal data structures are:
-1) b63_benchmark. Each function defined with a 'B63_BENCHMARK' or 'B63_BASELINE' macro corresponds to one benchmark instance.
-2) b63_suite. Set of all benchmarks defined in the translation unit.
-3) b63_ctype. Counter Type. Defines a type/family of a counter, for example, 'linux_perf_event' or 'jemalloc'
-4) b63_counter. 'Instance' of a counter, which has to be of one of the defined counter types. 
-5) b63_counter_list. Set of all counters to run benchmarks for.
-6) b63_run. Individual benchmark execution.
-
 ## Comparison and baselines
 Within the benchmark suite, there's a way to define 'baseline', and compare all other benchmarks against it. Comparison is very naive at the moment: it runs benchmarks for a few epochs, picks the best one and compares. This is ~reasonable way to deal with noise. Maybe we could support passing some seed around, making each epoch run 'reproducible' and do a more comprehensive comparison, like paired t-test.
 
@@ -207,9 +196,9 @@ Default counter, uses CLOCK_MONOTONIC, counts microseconds.
 ## Dependencies and compatibility
 
 B63 requires following C compiler attributes available:
-- cleanup
-- used
-- section
+- __attribute__((cleanup))
+- __attribute__((used)) 
+- __attribute__((section))
 
 Reasonably recent GCC and Clang have them, but I'm not sure which versions started supporting them.
 
@@ -239,6 +228,17 @@ will only work on Linux, jemalloc counter will only work/make sense if memory al
   - Caveats:
     - requires -lrt flag, as POSIX realtime extension are not (yet) in libc.
     - ref-cycles event from linux perf_events is not supported.
+
+## Internals
+The library consists of a core part responsible for running the benchmarks, and pluggable 'counters'. The library is header-only, thus, there isn't much 'encapsulation' going on.  Every global symbol is prefixed with b63\_.
+
+Main internal data structures are:
+1) b63_benchmark. Each function defined with a 'B63_BENCHMARK' or 'B63_BASELINE' macro corresponds to one benchmark instance.
+2) b63_suite. Set of all benchmarks defined in the translation unit.
+3) b63_ctype. Counter Type. Defines a type/family of a counter, for example, 'linux_perf_event' or 'jemalloc'
+4) b63_counter. 'Instance' of a counter, which has to be of one of the defined counter types. 
+5) b63_counter_list. Set of all counters to run benchmarks for.
+6) b63_run. Individual benchmark execution.
 
 ## Next steps:
 - a convenient way to measure outliers. For example, as hash maps usually have amortized O(1) cost for lookup, what does p99 lookup time looks like for some lookup distribution? What can be done to improve?
