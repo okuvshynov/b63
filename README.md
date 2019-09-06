@@ -196,9 +196,9 @@ Default counter, uses CLOCK_MONOTONIC, counts microseconds.
 ## Dependencies and compatibility
 
 B63 requires following C compiler attributes available:
-- __attribute__((cleanup))
-- __attribute__((used)) 
-- __attribute__((section))
+- \_\_attribute\_\_((cleanup))
+- \_\_attribute\_\_((used)) 
+- \_\_attribute\_\_((section))
 
 Reasonably recent GCC and Clang have them, but I'm not sure which versions started supporting them.
 
