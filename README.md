@@ -145,9 +145,19 @@ Following CLI flags are supported:
 It's possible to configure the counters to run within the code itself, by using B63_RUN_WITH("list,of,counters", argc, argv);
 
 ## Counters
+In addition to measuring 'time', B63 allows to define and use custom counters, for example CPU perf events.
+This allows to easily answer questions like 'how many cache misses will different version of the code have?' or
+'how different execution ports on CPU are used across several implementation of the algorithm?'.
+
+For now following counters are implemented:
+1) time - most basic counter, measures time in microseconds. [tested on Linux, FreeBSD, MacOS]
+2) jemalloc - measures bytes allocated by jemalloc. [tested on Linux, FreeBSD, MacOS]
+3) perf_events - measures custom CPU counters, like cache misses, branch mispredictions, etc. [works on Linux]
+
+### Notes for building custom counters:
 Counters are expected to be additive and monotonic;
-Implementation of the 'counting' and 'suspension' lives in src/b63_run.h; 
-Counters are reported [roughly] like this:
+Implementation of the 'counting' and 'suspension' lives in src/run.h; 
+Counters are aggregated [roughly] like this:
 ```
 total_events = (reading_after_run - reading_before_run - suspended_for);
 event_rate = total_events / iterations
@@ -174,9 +184,12 @@ $ ./_build/bm_suspend -i
 [DONE] basic                         : time : 71.967727 per iteration
 ```
 
-The way to interpret it is: 'with_suspend' is equivalent in 'non-suspended' time, thus the time/iteration is very close. However, the suspended activity takes a while, so we had to run fewer iterations overall. There's a set of counters already built:
+The way to interpret it is: 'with_suspend' is equivalent in 'non-suspended' time, thus the time/iteration is very close. However, the suspended activity takes a while, so we had to run fewer iterations overall. 
 
-### Linux perf_events ("lpe:...")
+
+### Existing counters:
+
+#### Linux perf_events ("lpe:...")
 The acronym used is 'lpe'.
 This counter uses perf_events interface, same as Linux perf tool. It allows counting CPU events either by predefined names for 
 popular counters (cycles, cache-misses, branches) or custom CPU-specific raw codes. Example usage:
@@ -184,13 +197,13 @@ popular counters (cycles, cache-misses, branches) or custom CPU-specific raw cod
 $ ./bm_raw -c lpe:cycles,lpe:r04a1
 ```
 
-### Jemalloc thread allocations ("jemalloc_thread_allocated")
+#### Jemalloc thread allocations ("jemalloc_thread_allocated")
 This counter tracks the number of bytes allocated by the calling thread. Example usage:
 ```
 $ ./bm_jemalloc -c jemalloc_thread_allocated
 ```
 
-### Time ("time")
+#### Time ("time")
 Default counter, uses CLOCK_MONOTONIC, counts microseconds.
 
 ## Dependencies and compatibility

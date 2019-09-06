@@ -41,48 +41,45 @@ static void b63_benchmark_run(b63_benchmark *b) {
   /* print out status */
   b63_print_start(b);
 
-  int64_t epoch, n;
-  for (epoch = 0; epoch < b->suite->epochs; epoch++) {
-    /* init context */
-    b63_run r;
-    r.events = 0LL;
-    r.iterations = 0LL;
-    r.suspension_done = 0;
-    r.benchmark = b;
-    int64_t started, done = 0LL;
+  /*
+   * For now we just compute avg over all epochs. It's likely to evolve to be
+   * more robust, for example paired t-test, thus, the code is organized to
+   * support having 'multiple results'. At the moment, however, the whole
+   * concept of 'epoch' is a little meaningless, as all runs will be simply
+   * added together.
+   *
+   * A simpler (and more flexible) option might be to just print out each epoch
+   * individually and do any analysis externally.
+   *
+   * Other benchmarking frameworks, for example folly/Benchmark at least at some
+   * moment were using minimal result to minimize noise.
+   */
+  b63_run *r = &(b->result);
+  r->events = 0LL;
+  r->iterations = 0LL;
+  r->suspension_done = 0;
+  r->benchmark = b;
+
+  for (int64_t epoch = 0; epoch < b->suite->epochs; epoch++) {
+    int64_t started, done = 0LL, iterations = 0LL;
     /*
      * For each epoch run as many iterations as fit within the time budget
      */
     int64_t epoch_started_ms = b63_now_ms();
-    for (n = 1; r.iterations < max_iterations_per_epoch; n *= 2) {
+    for (int64_t n = 1; iterations < max_iterations_per_epoch; n *= 2) {
 
       /* Here the 'measured' function is called */
       started = counter->type->read(counter->impl);
-      b->run(&r, n);
+      b->run(r, n);
       done = counter->type->read(counter->impl);
 
-      r.events += (done - started);
+      r->events += (done - started);
 
-      r.iterations += n;
+      iterations += n;
+      r->iterations += n;
       if ((b63_now_ms() - epoch_started_ms) > epoch_timelimit_ms) {
         break;
       }
-    }
-
-    /*
-     * 'best' event rate is picked.
-     * Best is defined as 'the fewer events, the better'.
-     * More sophisticated approach might be implemented here, for example
-     * paired t-test with each epoch being 'sample';
-     * this requires us to pass some seed around to make epoch reproducible.
-     * Another option is to just print out each epoch, and let something else
-     * to handle any analysis if needed.
-     */
-
-    /* TODO: can this overflow */
-    if (epoch == 0 ||
-        r.events * b->result.iterations < b->result.events * r.iterations) {
-      b->result = r;
     }
   }
   b63_print_done(b);
