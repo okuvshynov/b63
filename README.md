@@ -136,10 +136,10 @@ Two output modes are supported:
 ### CLI Flags
 
 Following CLI flags are supported:
--i if provided, interactive output mode will be used
--c counter1[,counter2,counter3,...] -- override default counters for all benchmarks.
--e epochs_count -- override how many epochs to run the benchmark for
--t timelimit_per_benchmark - time limit in seconds for how long to run the benchmark; includes time benchmark is suspended.
+- -i if provided, interactive output mode will be used
+- -c counter1[,counter2,counter3,...] -- override default counters for all benchmarks.
+- -e epochs_count -- override how many epochs to run the benchmark for
+- -t timelimit_per_benchmark - time limit in seconds for how long to run the benchmark; includes time benchmark is suspended.
 
 ### Configuration in code
 It's possible to configure the counters to run within the code itself, by using B63_RUN_WITH("list,of,counters", argc, argv);
