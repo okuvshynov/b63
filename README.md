@@ -60,7 +60,7 @@ B63_BASELINE(sequential, n) {
 }
 
 /*
- * This is another benchmark, which will be 'compared' to baseline
+ * This is another benchmark, which will be compared to baseline
  */
 B63_BENCHMARK(random, n) {
   std::vector<uint32_t> v;
@@ -80,7 +80,7 @@ B63_BENCHMARK(random, n) {
 int main(int argc, char **argv) {
   srand(time(0));
   /* 
-   * this call starts benchmarking.
+   * This call starts benchmarking.
    * Comma-separated list of counters to measure is passed explicitly here,
    * but one can provide command-line flag -c to override.
    * In this case, we are measuring 3 counters:
@@ -107,16 +107,16 @@ $ ./bm -i # i for 'interactive'
 [DONE] random                        : lpe:L1-dcache-load-misses : 80459.789448 per iteration (+1724.301%)
 ```
 Currently B63 repeats the run for every counter to reduce side-effects of measurement, but this might change in the future.
-The way to read the results: for benchmark 'sequential', which is baseline version, we spent 52 milliseconds per 'iteration';
-For 'random' version, we see clear increase in time and equivalent increase in CPU cycles (+181%), and a very prominent increase in L1 cache misses (+1724%).
+The way to read the results: for benchmark 'sequential', which is baseline version, we spent 52 milliseconds per iteration;
+For 'random' version, we see clear increase in time and equivalent increase in CPU cycles (+181%), and a much more prominent increase in L1 data cache misses (+1724%).
 
 Extra examples can be found in examples/ folder:
 1. Measuring time / iteration ([examples/basic.c](examples/basic.c));
 2. Suspending tracking ([examples/suspend.c](examples/suspend.c));
 3. Comparing implementations with baseline ([examples/baseline.c](examples/baseline.c));
 4. Using custom counter, number of function calls in this case ([examples/custom.c](examples/custom.c));
-5. Using cache miss counter from linux perf event ([examples/l1d_miss.cpp](examples/l1d_miss.cpp));
-6. Using raw counter from linux perf event ([examples/raw.c](examples/raw.c));
+5. Using cache miss counter from linux perf_events ([examples/l1d_miss.cpp](examples/l1d_miss.cpp));
+6. Using raw counter from linux perf_events ([examples/raw.c](examples/raw.c));
 7. Measuring jemalloc allocation stats ([examples/jemalloc.cpp](examples/jemalloc.cpp)).
 
 ## Comparison and baselines
@@ -151,8 +151,6 @@ It's possible to configure the counters to run within the code itself, by using 
 
 ## Counters
 In addition to measuring time, B63 allows to define and use custom counters, for example CPU perf events. Some counters are already built and provided in counters/ folder, but framework is flexible and makes it easy to define new ones.
-This makes answering questions like 'how many cache misses will different version of the code have?' or
-'how different execution ports on CPU are used across several implementation of the algorithm?' much easier compared to building separate binaries, running them with perf tool (or equivalent) drilling down to the function in question, etc.
 
 For now following counters are implemented:
 1) time - most basic counter, measures time in microseconds. [Linux, FreeBSD, MacOS]
@@ -185,7 +183,10 @@ In interactive mode, the rate of events per iteration is reported, while in plai
 ### Existing counters:
 #### Linux perf_events ("lpe:...")
 The acronym/prefix used is 'lpe'.
-This family of counters uses perf_events interface, same as Linux perf tool. It allows counting performance events either by predefined names for popular counters (cycles, cache-misses, branches, page-faults) or custom CPU-specific raw codes in r<Mask><Event> format. Example usage:
+This family of counters uses perf_events interface, same as Linux perf tool. It allows counting performance events either by predefined names for popular counters (cycles, cache-misses, branches, page-faults) or custom CPU-specific raw codes in r<Mask><Event> format. This makes answering questions like 'how many cache misses will different version of the code have?' or
+'how different execution ports on CPU are used across several implementation of the algorithm?' much easier compared to building separate binaries, running them with perf tool (or equivalent) drilling down to the function in question, etc. 
+  
+Example usage:
 ```
 $ ./bm_raw -c lpe:cycles,lpe:r04a1
 ```
