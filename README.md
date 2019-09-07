@@ -5,19 +5,18 @@ Light-weight micro-benchmarking tool for C.
 ## Motivation
 Why was it built, given that quite a few already exist?
 - quick and easy benchmarking for C, not C++ only;
-- benchmarking is usually associated with measuring wall time, CPU time or CPU cycles. I needed other 'counters' as well, specifically:
-  - completely custom measurements, like 'number of hash collisions';
+- benchmarking custom counter, rather than time/cycles only, specifically:
   - CPU Performance Monitoring Unit counters, like the number of cache misses and branch mispredictions;
   - jemalloc memory allocations;
-- preferably header-only library, no 'installation';
+  - custom measurements, like number of hash collisions;
 
 ## Examples
 The easiest way to get a sense of how it could be used is to look at and 
-run benchmarks from examples/ folder. The library is header-only, so the only 'dependencies' which examples express are: 
+run benchmarks from examples/ folder. The library is header-only, so examples only need to include:
 - b63.h header
 - individual counter headers.
 
-For example, this is how 'benchmarking' time, cpu cycles and cache misses might look like on Linux:
+For example, this is how benchmarking time, cpu cycles and cache misses might look like on Linux:
 
 ```cpp
 #include "../src/b63.h"
@@ -86,11 +85,10 @@ int main(int argc, char **argv) {
    * but one can provide command-line flag -c to override.
    * In this case, we are measuring 4 counters:
    *  * lpe:cycles - CPU cycles spent in benchmark (outside of B63_SUSPEND), as measured with Linux perf_events.
-   *  * lpe:LLC-load-misses - CPU last level cache (typically L3 these days) misses during benchmark run (outside of B63_SUSPEND).
    *  * lpe:L1-dcache-load-misses - CPU L1 Data cache misses during benchmark run (outside of B63_SUSPEND)
    *  * time - wall time (outside of B63_SUSPEND)
    */
-  B63_RUN_WITH("time,lpe:cycles,lpe:LLC-load-misses,lpe:L1-dcache-load-misses", argc, argv);
+  B63_RUN_WITH("time,lpe:cycles,lpe:L1-dcache-load-misses", argc, argv);
   return 0;
 }
 ```
@@ -105,13 +103,11 @@ $ ./bm -i # i for 'interactive'
 [DONE] random                        : time : 147816.263801 per iteration (+181.579%)
 [DONE] sequential                    : lpe:cycles : 131864.811233 per iteration (baseline)
 [DONE] random                        : lpe:cycles : 370943.605765 per iteration (+181.306%)
-[DONE] sequential                    : lpe:LLC-load-misses : 0.002442 per iteration (baseline)
-[DONE] random                        : lpe:LLC-load-misses : 0.007328 per iteration (+200.073%)
 [DONE] sequential                    : lpe:L1-dcache-load-misses : 4410.444933 per iteration (baseline)
 [DONE] random                        : lpe:L1-dcache-load-misses : 80459.789448 per iteration (+1724.301%)
 ```
 Currently B63 repeats the run for every counter to reduce side-effects of measurement, but this might change in the future.
-The way to read the results: for benchmark 'sequential', which is baseline version, we spent 52 milliseconds per 'iteration', there were only a tiny amount of LLC load misses, because entire dataset fits into L3 cache;
+The way to read the results: for benchmark 'sequential', which is baseline version, we spent 52 milliseconds per 'iteration';
 For 'random' version, we see clear increase in time and equivalent increase in CPU cycles (+181%), and a very prominent increase in L1 cache misses (+1724%).
 
 Extra examples can be found in examples/ folder:
@@ -129,16 +125,25 @@ Within the benchmark suite, there's a way to define 'baseline', and compare all 
 ## Output Modes
 Two output modes are supported:
  - plaintext mode (default), which produces output suitable for scripting/parsing.
+ ```
+ $ ./_build/bm_baseline
+basic,time,335544315,1721911000
+basic_half,time,671088635,1713924000
+```
  - interactive mode turned on with -i flag. There isn't much interactivity really, but the output is formatted and colored for human consumption, rather than other tool consumption.
+ ```
+ $ ./_build/bm_baseline -i
+[DONE] basic                         : time : 5.105797 per iteration (baseline)
+[DONE] basic_half                    : time : 2.531238 per iteration (-50.424%)
+```
 
 ## Configuration
 
 ### CLI Flags
-
 Following CLI flags are supported:
-- -i if provided, interactive output mode will be used
-- -c counter1[,counter2,counter3,...] -- override default counters for all benchmarks.
-- -e epochs_count -- override how many epochs to run the benchmark for
+- -i if provided, interactive output mode will be used;
+- -c counter1[,counter2,counter3,...] -- override default counters for all benchmarks;
+- -e epochs_count -- override how many epochs to run the benchmark for;
 - -t timelimit_per_benchmark - time limit in seconds for how long to run the benchmark; includes time benchmark is suspended.
 
 ### Configuration in code
