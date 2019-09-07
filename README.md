@@ -5,18 +5,18 @@ Light-weight micro-benchmarking tool for C.
 ## Motivation
 Why was it built, given that quite a few already exist?
 - quick and easy benchmarking for C, not C++ only;
-- benchmarking custom counter, rather than time/cycles only, specifically:
-  - CPU Performance Monitoring Unit counters, like the number of cache misses and branch mispredictions;
+- benchmarking custom counters, rather than time/cycles only, specifically:
+  - CPU Performance Monitoring Unit counters, for example number of cache misses or branch mispredictions;
   - jemalloc memory allocations;
-  - custom measurements, like number of hash collisions;
+  - custom measurements, like number of hash collisions.
 
 ## Examples
 The easiest way to get a sense of how it could be used is to look at and 
 run benchmarks from examples/ folder. The library is header-only, so examples only need to include:
-- b63.h header
-- individual counter headers.
+- b63.h header;
+- individual counter headers, if needed.
 
-For example, this is how benchmarking time, cpu cycles and cache misses might look like on Linux:
+This is how benchmarking time, cpu cycles and cache misses might look like on Linux:
 
 ```cpp
 #include "../src/b63.h"
@@ -81,12 +81,12 @@ int main(int argc, char **argv) {
   srand(time(0));
   /* 
    * this call starts benchmarking.
-   * List of 'counters' to measure is passed explicitly here,
+   * Comma-separated list of counters to measure is passed explicitly here,
    * but one can provide command-line flag -c to override.
-   * In this case, we are measuring 4 counters:
-   *  * lpe:cycles - CPU cycles spent in benchmark (outside of B63_SUSPEND), as measured with Linux perf_events.
-   *  * lpe:L1-dcache-load-misses - CPU L1 Data cache misses during benchmark run (outside of B63_SUSPEND)
-   *  * time - wall time (outside of B63_SUSPEND)
+   * In this case, we are measuring 3 counters:
+   *  * lpe:cycles - CPU cycles spent in benchmark outside of B63_SUSPEND, as measured with Linux perf_events;
+   *  * lpe:L1-dcache-load-misses - CPU L1 Data cache misses during benchmark run outside of B63_SUSPEND;
+   *  * time - wall time outside of B63_SUSPEND.
    */
   B63_RUN_WITH("time,lpe:cycles,lpe:L1-dcache-load-misses", argc, argv);
   return 0;
@@ -111,16 +111,16 @@ The way to read the results: for benchmark 'sequential', which is baseline versi
 For 'random' version, we see clear increase in time and equivalent increase in CPU cycles (+181%), and a very prominent increase in L1 cache misses (+1724%).
 
 Extra examples can be found in examples/ folder:
-1. Measuring time / iteration ([examples/basic.c](examples/basic.c)):
-2. Suspending tracking ([examples/suspend.c](examples/suspend.c)):
-3. Comparing implementations with baseline ([examples/baseline.c](examples/baseline.c)):
-4. Using custom counter, number of function calls in this case ([examples/custom.c](examples/custom.c))
-5. Using cache miss counter from linux perf event ([examples/l1d_miss.cpp](examples/l1d_miss.cpp))
-6. Using raw counter from linux perf event ([examples/raw.c](examples/raw.c)):
-7. Measuring jemalloc allocation stats ([examples/jemalloc.cpp](examples/jemalloc.cpp))
+1. Measuring time / iteration ([examples/basic.c](examples/basic.c));
+2. Suspending tracking ([examples/suspend.c](examples/suspend.c));
+3. Comparing implementations with baseline ([examples/baseline.c](examples/baseline.c));
+4. Using custom counter, number of function calls in this case ([examples/custom.c](examples/custom.c));
+5. Using cache miss counter from linux perf event ([examples/l1d_miss.cpp](examples/l1d_miss.cpp));
+6. Using raw counter from linux perf event ([examples/raw.c](examples/raw.c));
+7. Measuring jemalloc allocation stats ([examples/jemalloc.cpp](examples/jemalloc.cpp)).
 
 ## Comparison and baselines
-Within the benchmark suite, there's a way to define 'baseline', and compare all other benchmarks against it. Comparison is very naive at the moment: it runs benchmarks for a few epochs, picks the best one and compares. This is ~reasonable way to deal with noise. Maybe we could support passing some seed around, making each epoch run 'reproducible' and do a more comprehensive comparison, like paired t-test.
+Within the benchmark suite, there's a way to define a baseline, and compare all other benchmarks against it. Comparison is very naive at the moment: it runs benchmarks for a few epochs, but then simply aggregates all the results together. By-epoch execution will become important when a better comparison mechanism, like paired t-test, will be added.
 
 ## Output Modes
 Two output modes are supported:
@@ -150,35 +150,26 @@ Following CLI flags are supported:
 It's possible to configure the counters to run within the code itself, by using B63_RUN_WITH("list,of,counters", argc, argv);
 
 ## Counters
-In addition to measuring 'time', B63 allows to define and use custom counters, for example CPU perf events.
-This allows to easily answer questions like 'how many cache misses will different version of the code have?' or
-'how different execution ports on CPU are used across several implementation of the algorithm?'.
+In addition to measuring time, B63 allows to define and use custom counters, for example CPU perf events. Some counters are already built and provided in counters/ folder, but framework is flexible and makes it easy to define new ones.
+This makes answering questions like 'how many cache misses will different version of the code have?' or
+'how different execution ports on CPU are used across several implementation of the algorithm?' much easier compared to building separate binaries, running them with perf tool (or equivalent) drilling down to the function in question, etc.
 
 For now following counters are implemented:
-1) time - most basic counter, measures time in microseconds. [tested on Linux, FreeBSD, MacOS]
-2) jemalloc - measures bytes allocated by jemalloc. [tested on Linux, FreeBSD, MacOS]
-3) perf_events - measures custom CPU counters, like cache misses, branch mispredictions, etc. [works on Linux]
+1) time - most basic counter, measures time in microseconds. [Linux, FreeBSD, MacOS]
+2) jemalloc - measures bytes allocated by jemalloc. [Linux, FreeBSD, MacOS]
+3) perf_events - measures custom CPU counters, like cache misses, branch mispredictions, etc. [Linux only, 2.6.31+]
 
 ### Notes for building custom counters:
 Counters are expected to be additive and monotonic;
-Implementation of the 'counting' and 'suspension' lives in src/run.h; 
-Counters are aggregated [roughly] like this:
-```
-total_events = (reading_after_run - reading_before_run - suspended_for);
-event_rate = total_events / iterations
-```
+Implementation of the counting and suspension lives in [src/run.h](src/run.h); [examples/custom.c](examples/custom.c) is a simple case of custom counter definition. All counters shipped with the library can be used as examples, as they do not rely on anything internal from b63. 
 
 Counters header files should be included from benchmark c/cpp file directly; only default timer counter is included from
-benchmarking library itself. It is done to avoid having an insane amount of ifdefs in the code, as counters have to
-be gated by compiler/os/libraries installed and used.
+b63 itself. It is done to avoid having an insane amount of ifdefs in the code and compilicated build rules, as counters have to be gated by compiler/os/libraries installed and used.
 When benchmarks are configured to run with multiple counters, each benchmark is re-run for each counter. This is an easy way to deal with measurement side effects, but has obvious disadvantages:
 - benchmark needs to run longer;
 - in cases when the variance between benchmarks runs is high, results might look confusing.
 
-The suspension is an important case to understand and interpret correctly; 
-In interactive mode, the rate of events is reported, while in plaintext mode number of iterations and number of events is printed out.
-Time limit for running the benchmark is taking time spent in suspension into account, to make runtime ~predictable.
-In cases when suspended operations are taking long time, result for [the benchmark](examples/suspend.c) might look like this:
+The suspension is an important case to understand and interpret correctly. To illustrate this, let's look at the following example [benchmark](examples/suspend.c):
 
 ```
 $ ./_build/bm_suspend
@@ -189,27 +180,24 @@ $ ./_build/bm_suspend -i
 [DONE] basic                         : time : 71.967727 per iteration
 ```
 
-The way to interpret it is: 'with_suspend' is equivalent in 'non-suspended' time, thus the time/iteration is very close. However, the suspended activity takes a while, so we had to run fewer iterations overall. 
-
+In interactive mode, the rate of events per iteration is reported, while in plaintext mode number of iterations and number of events is printed out directly. Time limit for running the benchmark is taking time spent in suspension into account, to make run time predictable. Thus, the way to interpret the output is: 'with_suspend' is equivalent to 'basic' in non-suspended time, thus the time/iteration is very close. However, the suspended activity takes a while, so we had to run fewer iterations overall. 
 
 ### Existing counters:
-
 #### Linux perf_events ("lpe:...")
-The acronym used is 'lpe'.
-This counter uses perf_events interface, same as Linux perf tool. It allows counting CPU events either by predefined names for 
-popular counters (cycles, cache-misses, branches) or custom CPU-specific raw codes. Example usage:
+The acronym/prefix used is 'lpe'.
+This family of counters uses perf_events interface, same as Linux perf tool. It allows counting performance events either by predefined names for popular counters (cycles, cache-misses, branches, page-faults) or custom CPU-specific raw codes in r<Mask><Event> format. Example usage:
 ```
 $ ./bm_raw -c lpe:cycles,lpe:r04a1
 ```
 
 #### Jemalloc thread allocations ("jemalloc_thread_allocated")
-This counter tracks the number of bytes allocated by the calling thread. Example usage:
+This counter tracks the number of bytes allocated by jemalloc in the calling thread. Example usage:
 ```
 $ ./bm_jemalloc -c jemalloc_thread_allocated
 ```
 
 #### Time ("time")
-Default counter, uses CLOCK_MONOTONIC, counts microseconds.
+Default counter, counts microseconds.
 
 ## Dependencies and compatibility
 
@@ -248,18 +236,19 @@ will only work on Linux, jemalloc counter will only work/make sense if memory al
     - ref-cycles event from linux perf_events is not supported.
 
 ## Internals
-The library consists of a core part responsible for running the benchmarks, and pluggable 'counters'. The library is header-only, thus, there isn't much 'encapsulation' going on.  Every global symbol is prefixed with b63\_.
+The library consists of a core part responsible for running the benchmarks, and pluggable counters. The library is header-only, thus, there isn't much encapsulation going on.  Every global symbol is prefixed with b63\_.
 
 Main internal data structures are:
 1) b63_benchmark. Each function defined with a 'B63_BENCHMARK' or 'B63_BASELINE' macro corresponds to one benchmark instance.
 2) b63_suite. Set of all benchmarks defined in the translation unit.
 3) b63_ctype. Counter Type. Defines a type/family of a counter, for example, 'linux_perf_event' or 'jemalloc'
-4) b63_counter. 'Instance' of a counter, which has to be of one of the defined counter types. 
+4) b63_counter. Instance of a counter, which has to be of one of the defined counter types. 
 5) b63_counter_list. Set of all counters to run benchmarks for.
 6) b63_run. Individual benchmark execution.
 
 ## Next steps:
 - a convenient way to measure outliers. For example, as hash maps usually have amortized O(1) cost for lookup, what does p99 lookup time looks like for some lookup distribution? What can be done to improve?
+- paired t-test for comparison;
 - support CPU perf counters sources beyond Linux perf_events, for example [Intel's PCM](https://github.com/opcm/pcm) and [BSD pmcstat](https://www.freebsd.org/cgi/man.cgi?query=pmcstat).
-- measure/report both CPU and GPU perf counters (at least for Nvidia).
+- GPU perf counters (at least for Nvidia).
 - [low-pri] disk access and network.
