@@ -124,11 +124,11 @@ Extra examples can be found in examples/ folder:
 7. Measuring jemalloc allocation stats ([examples/jemalloc.cpp](examples/jemalloc.cpp))
 
 ## Comparison and baselines
-Within the benchmark suite, there's a way to define 'baseline', and compare all other benchmarks against it. Comparison is very naive at the moment: it runs benchmarks for a few epochs, picks the best one and compares. This is ~reasonable way to deal with noise. Maybe we could support passing some seed around, making each epoch run 'reproducible' and do a more comprehensive comparison, like paired t-test.
+Within the benchmark suite, there's a way to define 'baseline', and compare all other benchmarks against it. When comparing, 99% confidence interval is computed using differences between individual epochs.
 
 ## Output Modes
 Two output modes are supported:
- - plaintext mode (default), which produces output suitable for scripting/parsing.
+ - plaintext mode (default), which produces output suitable for scripting/parsing, printing out each epoch individually.
  - interactive mode turned on with -i flag. There isn't much interactivity really, but the output is formatted and colored for human consumption, rather than other tool consumption.
 
 ## Configuration
@@ -140,6 +140,8 @@ Following CLI flags are supported:
 - -c counter1[,counter2,counter3,...] -- override default counters for all benchmarks.
 - -e epochs_count -- override how many epochs to run the benchmark for
 - -t timelimit_per_benchmark - time limit in seconds for how long to run the benchmark; includes time benchmark is suspended.
+- -d delimiter to use for plaintext. Comma is default.
+- -s seed. Optional, needed for reproducibility and A/B testing across binaries, for example, different versions of code or difference hardware.
 
 ### Configuration in code
 It's possible to configure the counters to run within the code itself, by using B63_RUN_WITH("list,of,counters", argc, argv);

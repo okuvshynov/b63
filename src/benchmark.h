@@ -19,21 +19,32 @@
 
 #include "counter_list.h"
 
-struct b63_run;
+struct b63_epoch;
 struct b63_benchmark;
 struct b63_sink;
 struct b63_suite;
+struct b63_counter;
 
-/* This structure represents indivudual benchmark run. */
-typedef struct b63_run {
+/*
+ * Epoch is a unit of benchmark execution which might consist
+ * of multiple iterations. For each benchmark,counter pair there
+ * could be several epochs configured to run.
+ * Result of each epoch will be used as individual measurement
+ * in confidence interval computation.
+ */
+typedef struct b63_epoch {
   struct b63_benchmark *benchmark;
+  struct b63_counter *counter;
   int64_t iterations;
   int64_t events;
   int8_t suspension_done;
-} b63_run;
+} b63_epoch;
 
-/* benchmarked function template, it needs to support 'run n iterations' */
-typedef void (*b63_target_fn)(struct b63_run *, uint64_t);
+/*
+ * benchmarked function template, it needs to support 'run n iterations' and
+ * seed for any generation.
+ */
+typedef void (*b63_target_fn)(struct b63_epoch *, uint64_t, int64_t);
 
 /*
  * This struct represents individual benchmark.
@@ -47,9 +58,9 @@ typedef struct b63_benchmark {
   const int8_t is_baseline;
   /* [weak] pointer to suite config */
   struct b63_suite *suite;
+  /* [weak] pointer to current results. Used ONLY for baseline */
+  b63_epoch *results;
 
-  /* final result */
-  b63_run result;
 } b63_benchmark;
 
 #endif

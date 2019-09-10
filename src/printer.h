@@ -19,6 +19,7 @@
 
 #include "benchmark.h"
 #include "suite.h"
+#include "utils/stats.h"
 
 #include <inttypes.h>
 #include <stdio.h>
@@ -27,62 +28,45 @@ const char *B63_CLR_RED = "\033[0;31m";
 const char *B63_CLR_GREEN = "\033[0;32m";
 const char *B63_CLR_RESET = "\033[0m";
 
-/* Called when benchmark starts. In case of plaintext, does nothing. */
-static void b63_print_start(b63_benchmark *b) {
-  if (b->suite->printer_config.plaintext != 0) {
+static void b63_print_individual(b63_benchmark *bm, const char *counter,
+                                 b63_stats *tt) {
+  if (bm->suite->printer_config.plaintext != 0) {
     return;
   }
-  printf("[....] %-30s: %s", b->name, b->suite->counter->name);
+  printf("%-30s%-20s: %6.3lf\n", bm->name, counter, tt->sum_test / tt->n);
+}
+
+static void b63_print_comparison(b63_benchmark *bm, const char *counter,
+                                 b63_stats *tt) {
+  if (bm->suite->printer_config.plaintext != 0) {
+    return;
+  }
+  double d = b63_stats_diff(tt);
+  double percentage_diff = b63_stats_percentage_diff(tt);
+  double interval99 = b63_stats_99_interval(tt);
+  double a = d - interval99;
+  double b = d + interval99;
+  const char *c = B63_CLR_RESET;
+  char confident = ' ';
+  /* confidense interval outside of 0 */
+  if (a * b > 0) {
+    c = d < 0 ? B63_CLR_GREEN : B63_CLR_RED;
+    confident = '*';
+  }
+  printf("%-30s%-20s:%s%c%6.3lf (%+6.3lf%%)%s\n", bm->name, counter, c,
+         confident, tt->sum_test / tt->n, percentage_diff, B63_CLR_RESET);
+
   fflush(stdout);
 }
 
-/* Called when benchmark is finished. */
-static void b63_print_done(b63_benchmark *b) {
+static void b63_print_done(b63_epoch *r) {
   /* plaintext output */
-  if (b->suite->printer_config.plaintext != 0) {
-    char sep = b->suite->printer_config.separator;
-    printf("%s%c%s%c%" PRId64 "%c%" PRId64 "\n", b->name, sep,
-           b->suite->counter->name, sep, b->result.iterations, sep,
-           b->result.events);
+  if (r->benchmark->suite->printer_config.plaintext != 0) {
+    char d = r->benchmark->suite->printer_config.delimiter;
+    printf("%s%c%s%c%" PRId64 "%c%" PRId64 "\n", r->benchmark->name, d,
+           r->counter->name, d, r->iterations, d, r->events);
     fflush(stdout);
-    return;
   }
-  double events_rate = 1.0 * b->result.events / b->result.iterations;
-
-  /* no baseline defined in the suite */
-  if (b->suite->baseline == NULL) {
-    printf("\r[DONE] %-30s: %s : %lf per iteration\n", b->name,
-           b->suite->counter->name, events_rate);
-    fflush(stdout);
-    return;
-  }
-
-  /* this benchmark is a baseline */
-  if (b->is_baseline) {
-    printf("\r[DONE] %-30s: %s : %lf per iteration (baseline)\n", b->name,
-           b->suite->counter->name, events_rate);
-    fflush(stdout);
-    return;
-  }
-
-  /* there's another baseline and we print comparison */
-  double baseline_events_rate = 1.0 * b->suite->baseline->result.events /
-                                b->suite->baseline->result.iterations;
-  printf("\r");
-  if (events_rate <= baseline_events_rate) {
-    /* not worse than baseline */
-    printf("%s[DONE]%s %-30s: %s : %lf per iteration (%s-%.3lf%%%s)\n",
-           B63_CLR_GREEN, B63_CLR_RESET, b->name, b->suite->counter->name,
-           events_rate, B63_CLR_GREEN,
-           100 - 100.0 * events_rate / baseline_events_rate, B63_CLR_RESET);
-  } else {
-    /* worse than baseline */
-    printf("%s[DONE]%s %-30s: %s : %lf per iteration (%s+%.3lf%%%s)\n",
-           B63_CLR_RED, B63_CLR_RESET, b->name, b->suite->counter->name,
-           events_rate, B63_CLR_RED,
-           100.0 * events_rate / baseline_events_rate - 100, B63_CLR_RESET);
-  }
-  fflush(stdout);
 }
 
 #endif

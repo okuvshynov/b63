@@ -25,91 +25,116 @@
 #include "printer.h"
 #include "suite.h"
 #include "utils/section_ptr_list.h"
+#include "utils/stats.h"
 #include "utils/timer.h"
 
 #include "counters/time.h"
 
-/* Runs individual benchmark for several epochs. */
-static void b63_benchmark_run(b63_benchmark *b) {
-  /* total runtime including suspended time for each benchmark */
-  const int64_t epoch_timelimit_ms =
+static void b63_epoch_run(b63_epoch *e, int64_t seed) {
+  b63_benchmark *b = e->benchmark;
+  const int64_t timelimit_ms =
       1000LL * b->suite->timelimit_s / b->suite->epochs;
-  b63_counter *counter = b->suite->counter;
+  b63_counter *counter = e->counter;
 
   const int64_t max_iterations_per_epoch = (1LL << 31LL);
+  e->events = 0LL;
+  e->iterations = 0LL;
+  e->suspension_done = 0;
 
-  /* print out status */
-  b63_print_start(b);
-
+  int64_t started, done;
   /*
-   * For now we just compute avg over all epochs. It's likely to evolve to be
-   * more robust, for example paired t-test, thus, the code is organized to
-   * support having 'multiple results'. At the moment, however, the whole
-   * concept of 'epoch' is a little meaningless, as all runs will be simply
-   * added together.
-   *
-   * A simpler (and more flexible) option might be to just print out each epoch
-   * individually and do any analysis externally.
-   *
-   * Other benchmarking frameworks, for example folly/Benchmark at least at some
-   * moment were using minimal result to minimize noise.
+   * For each epoch run as many iterations as fit within the time budget
    */
-  b63_run *r = &(b->result);
-  r->events = 0LL;
-  r->iterations = 0LL;
-  r->suspension_done = 0;
-  r->benchmark = b;
+  int64_t started_ms = b63_now_ms();
+  for (int64_t n = 1; e->iterations < max_iterations_per_epoch; n *= 2) {
 
-  for (int64_t epoch = 0; epoch < b->suite->epochs; epoch++) {
-    int64_t started, done = 0LL, iterations = 0LL;
-    /*
-     * For each epoch run as many iterations as fit within the time budget
-     */
-    int64_t epoch_started_ms = b63_now_ms();
-    for (int64_t n = 1; iterations < max_iterations_per_epoch; n *= 2) {
+    /* Here the 'measured' function is called */
+    started = counter->type->read(counter->impl);
+    b->run(e, n, seed);
+    done = counter->type->read(counter->impl);
 
-      /* Here the 'measured' function is called */
-      started = counter->type->read(counter->impl);
-      b->run(r, n);
-      done = counter->type->read(counter->impl);
+    e->events += (done - started);
+    e->iterations += n;
 
-      r->events += (done - started);
-
-      iterations += n;
-      r->iterations += n;
-      if ((b63_now_ms() - epoch_started_ms) > epoch_timelimit_ms) {
-        break;
-      }
+    /* ran out of time */
+    if ((b63_now_ms() - started_ms) > timelimit_ms) {
+      break;
     }
   }
-  b63_print_done(b);
+  b63_print_done(e);
 }
 
-/* Run all registered benchmarks within a passed suite */
-static void b63_suite_run(b63_suite *suite) {
-  B63_FOR_EACH_COUNTER(suite->counter_list, counter) {
-    suite->baseline = NULL;
-    suite->counter = counter;
-    /* Run baseline benchmark only. */
-    B63_LIST_FOR_EACH(b63_benchmark, b) {
-      (*b)->suite = suite;
-      if ((*b)->is_baseline) {
-        if (suite->baseline != NULL) {
-          fprintf(stderr, "two or more baselines defined.\n");
-          exit(EXIT_FAILURE);
-        }
-        suite->baseline = *b;
-        b63_benchmark_run(*b);
-      }
-    }
+/*
+ * Runs benchmark b while measuring counter c
+ */
+static void b63_benchmark_run(b63_benchmark *b, b63_counter *c,
+                              b63_epoch *results) {
+  int64_t result_index = 0LL;
+  b63_suite *suite = b->suite;
+  b63_stats tt;
+  b63_stats_init(&tt);
 
-    /* Run non-baselines */
+  int64_t next_seed = suite->seed;
+  b63_epoch *baseline_result = NULL;
+  if (suite->baseline != NULL && b->is_baseline == 0) {
+    baseline_result = suite->baseline->results;
+  }
+
+  for (int64_t e = 0; e < suite->epochs; e++) {
+    b63_epoch *r = &(results[result_index++]);
+    r->benchmark = b;
+    r->counter = c;
+    b63_epoch_run(r, next_seed);
+    next_seed = 134775853LL * next_seed + 1;
+
+    double baseline_rate = 0.0;
+    if (baseline_result != NULL) {
+      baseline_rate =
+          1.0 * baseline_result->events / baseline_result->iterations;
+      baseline_result++;
+    }
+    b63_stats_add(1.0 * r->events / r->iterations, baseline_rate, &tt);
+  }
+  if (baseline_result != NULL) {
+    b63_print_comparison(b, c->name, &tt);
+  } else {
+    b63_print_individual(b, c->name, &tt);
+  }
+}
+
+static void b63_suite_run(b63_suite *suite) {
+  B63_LIST_FOR_EACH(b63_benchmark, b) {
+    (*b)->suite = suite;
+    /* set baseline */
+    if ((*b)->is_baseline) {
+      if (suite->baseline != NULL) {
+        fprintf(stderr, "two or more baselines defined.\n");
+        exit(EXIT_FAILURE);
+      }
+      suite->baseline = *b;
+    }
+  }
+
+  b63_epoch *results = (b63_epoch *)malloc(suite->epochs * sizeof(b63_epoch));
+  b63_epoch *baseline_results = NULL;
+
+  B63_FOR_EACH_COUNTER(suite->counter_list, counter) {
+    if (suite->baseline != NULL) {
+      baseline_results = (b63_epoch *)malloc(suite->epochs * sizeof(b63_epoch));
+      suite->baseline->results = baseline_results;
+      b63_benchmark_run(suite->baseline, counter, baseline_results);
+    }
     B63_LIST_FOR_EACH(b63_benchmark, b) {
       if ((*b)->is_baseline) {
         continue;
       }
-      b63_benchmark_run(*b);
+      b63_benchmark_run(*b, counter, results);
     }
+  }
+
+  free(results);
+  if (baseline_results != NULL) {
+    free(baseline_results);
   }
 }
 
@@ -166,17 +191,17 @@ static void b63_go(int argc, char **argv, const char *default_counter) {
 
 typedef struct b63_suspension {
   int64_t start;
-  b63_run *run;
+  b63_epoch *run;
 } b63_suspension;
 
 /*
  * This is a callback to execute when suspend context gets out of scope.
- * Total number of events during 'suspension loop' is accumulated.
+ * Total number of events during 'suspension loop' is subtracted from 
+ * event counter.
  */
 static void b63_suspension_done(b63_suspension *s) {
-  s->run->events -= (s->run->benchmark->suite->counter->type->read(
-                         s->run->benchmark->suite->counter->impl) -
-                     s->start);
+  s->run->events -=
+      (s->run->counter->type->read(s->run->counter->impl) - s->start);
 }
 
 /*
@@ -187,8 +212,8 @@ static void b63_suspension_done(b63_suspension *s) {
   b63run->suspension_done = 0;                                                 \
   for (b63_suspension b63s __attribute__((cleanup(b63_suspension_done))) =     \
            {                                                                   \
-               .start = b63run->benchmark->suite->counter->type->read(         \
-                   b63run->benchmark->suite->counter->impl),                   \
+               .start = b63run->counter->type->read(         \
+                   b63run->counter->impl),                   \
               .run = b63run,                                                   \
            };                                                                  \
        b63run->suspension_done == 0; b63run->suspension_done = 1)

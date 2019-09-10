@@ -28,6 +28,11 @@ bm_baseline:
 	cc -Wall -Wno-unused-function baseline.c -I. -O3 -o _build/bm_baseline -std=c99
 	./_build/bm_baseline -i
 
+bm_baseline_multi:
+	mkdir -p _build/
+	cc -Wall -Wno-unused-function baseline_multi.c -I. -O3 -o _build/bm_baseline_multi -std=c99
+	./_build/bm_baseline_multi -i
+
 bm_custom:
 	mkdir -p _build/
 	cc -Wall -Wno-unused-function custom.c -I. -O3 -o _build/bm_custom -std=c99
