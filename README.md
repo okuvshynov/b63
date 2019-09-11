@@ -101,12 +101,12 @@ This is the output of the sample run:
 ```
 $ g++ -O3 bm_seed.cpp -o bm
 $ ./bm -i # i for interactive mode
-sequential                    time                : 52852.595
-random                        time                :*148815.260 (+181.567%)
-sequential                    lpe:cycles          : 132263.717
-random                        lpe:cycles          :*371542.108 (+180.910%)
-sequential                    lpe:L1-dcache-load-misses: 15250.451
-random                        lpe:L1-dcache-load-misses:*80782.223 (+429.704%)
+sequential                    time                : 52858.855
+random                        time                :148667.365 (+181.253% *)
+sequential                    lpe:cycles          : 132055.030
+random                        lpe:cycles          :372451.514 (+182.043% *)
+sequential                    lpe:L1-dcache-load-misses: 4969.704
+random                        lpe:L1-dcache-load-misses:80874.886 (+1527.358% *)
 ```
 Currently B63 repeats the run for every counter to reduce side-effects of measurement, but this might change in the future.
 The way to read the results: for benchmark 'sequential', which is baseline version, we spent 52 milliseconds per iteration;
@@ -144,10 +144,9 @@ basic_half,time,33554431,228560855
 ```
  - interactive mode turned on with -i flag. There isn't much interactivity really, but the output is formatted and colored for human consumption, rather than other tool consumption.
  ```
- $ ./_build/bm_baseline -i
-basic                         time                : 13.808
-basic_half                    time                :* 6.830 (-50.535%)
-
+$ ./_build/bm_baseline -i
+basic                         time                : 13.597
+basic_half                    time                : 6.787 (-50.083% *)
 ```
 
 ## Configuration
