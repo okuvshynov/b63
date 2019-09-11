@@ -65,6 +65,8 @@ B63_BASELINE(sequential, n) {
 B63_BENCHMARK(random, n) {
   std::vector<uint32_t> v;
   B63_SUSPEND {
+    /* b63_seed is passed implicitly to every benchmark */
+    std::srand(b63_seed);
     v.resize(kSize);
     std::generate(v.begin(), v.end(), std::rand);
   }
@@ -97,18 +99,18 @@ Build and run:
 
 This is the output of the sample run:
 ```
-$ g++ -O3 bm.cpp -o bm
-$ ./bm -i # i for 'interactive'
-[DONE] sequential                    : time : 52495.468864 per iteration (baseline)
-[DONE] random                        : time : 147816.263801 per iteration (+181.579%)
-[DONE] sequential                    : lpe:cycles : 131864.811233 per iteration (baseline)
-[DONE] random                        : lpe:cycles : 370943.605765 per iteration (+181.306%)
-[DONE] sequential                    : lpe:L1-dcache-load-misses : 4410.444933 per iteration (baseline)
-[DONE] random                        : lpe:L1-dcache-load-misses : 80459.789448 per iteration (+1724.301%)
+$ g++ -O3 bm_seed.cpp -o bm
+$ ./bm -i # i for interactive mode
+sequential                    time                : 52852.595
+random                        time                :*148815.260 (+181.567%)
+sequential                    lpe:cycles          : 132263.717
+random                        lpe:cycles          :*371542.108 (+180.910%)
+sequential                    lpe:L1-dcache-load-misses: 15250.451
+random                        lpe:L1-dcache-load-misses:*80782.223 (+429.704%)
 ```
 Currently B63 repeats the run for every counter to reduce side-effects of measurement, but this might change in the future.
 The way to read the results: for benchmark 'sequential', which is baseline version, we spent 52 milliseconds per iteration;
-For 'random' version, we see clear increase in time and equivalent increase in CPU cycles (+181%), and a much more prominent increase in L1 data cache misses (+1724%).
+For 'random' version, we see clear increase in time and equivalent increase in CPU cycles (+181%), and a much more prominent increase in L1 data cache misses (+1724%). The asteriks means: p99 confidence interval for the difference between benchmark and baseline does not contain 0, thus, you can be 99% confident that it is derectionally correct result.
 
 Extra examples can be found in examples/ folder:
 1. Measuring time / iteration ([examples/basic.c](examples/basic.c));
@@ -117,24 +119,35 @@ Extra examples can be found in examples/ folder:
 4. Using custom counter, number of function calls in this case ([examples/custom.c](examples/custom.c));
 5. Using cache miss counter from linux perf_events ([examples/l1d_miss.cpp](examples/l1d_miss.cpp));
 6. Using raw counter from linux perf_events ([examples/raw.c](examples/raw.c));
-7. Measuring jemalloc allocation stats ([examples/jemalloc.cpp](examples/jemalloc.cpp)).
+7. Measuring jemalloc allocation stats ([examples/jemalloc.cpp](examples/jemalloc.cpp));
+8. Utilizing seed to keep benchmark results reproducible ([examples/bm_seed.cpp](examples/bm_seed.cpp));
+9. Multiple comparisons, including A/A test: ([examples/baseline_multi.c](examples/baseline_multi.c)).
 
 ## Comparison and baselines
 Within the benchmark suite, there's a way to define 'baseline', and compare all other benchmarks against it. When comparing, 99% confidence interval is computed using differences between individual epochs.
 
 ## Output Modes
 Two output modes are supported:
- - plaintext mode (default), which produces output suitable for scripting/parsing.
+ - plaintext mode (default), which produces output suitable for scripting/parsing, printing out each epoch individually to leave an option for more advanced data studies.
  ```
  $ ./_build/bm_baseline
-basic,time,335544315,1721911000
-basic_half,time,671088635,1713924000
+basic,time,16777215,233781738
+basic,time,16777215,228961470
+basic,time,16777215,230559174
+basic,time,16777215,228707363
+basic,time,16777215,228769396
+basic_half,time,33554431,227525646
+basic_half,time,33554431,228749848
+basic_half,time,33554431,228985440
+basic_half,time,33554431,228123909
+basic_half,time,33554431,228560855
 ```
  - interactive mode turned on with -i flag. There isn't much interactivity really, but the output is formatted and colored for human consumption, rather than other tool consumption.
  ```
  $ ./_build/bm_baseline -i
-[DONE] basic                         : time : 5.105797 per iteration (baseline)
-[DONE] basic_half                    : time : 2.531238 per iteration (-50.424%)
+basic                         time                : 13.808
+basic_half                    time                :* 6.830 (-50.535%)
+
 ```
 
 ## Configuration
@@ -146,7 +159,7 @@ Following CLI flags are supported:
 - -e epochs_count -- override how many epochs to run the benchmark for;
 - -t timelimit_per_benchmark - time limit in seconds for how long to run the benchmark; includes time benchmark is suspended.
 - -d delimiter to use for plaintext. Comma is default.
-- -s seed. Optional, needed for reproducibility and A/B testing across binaries, for example, different versions of code or difference hardware.
+- -s seed. Optional, needed for reproducibility and A/B testing across binaries, for example, different versions of code or difference hardware. If not provided, seed will be generated.
 
 ### Configuration in code
 It's possible to configure the counters to run within the code itself, by using B63_RUN_WITH("list,of,counters", argc, argv);
@@ -173,11 +186,19 @@ The suspension is an important case to understand and interpret correctly. To il
 
 ```
 $ ./_build/bm_suspend
-with_suspend,time,2097151,150854030
-basic,time,4194303,301687751
+with_suspend,time,8388607,117749190
+with_suspend,time,8388607,117033209
+with_suspend,time,8388607,114440936
+with_suspend,time,8388607,114655889
+with_suspend,time,8388607,114215822
+basic,time,16777215,228015817
+basic,time,16777215,230814726
+basic,time,16777215,227958139
+basic,time,16777215,228723995
+basic,time,16777215,229286180
 $ ./_build/bm_suspend -i
-[DONE] with_suspend                  : time : 71.936094 per iteration
-[DONE] basic                         : time : 71.967727 per iteration
+with_suspend                  time                : 13.672
+basic                         time                : 13.528
 ```
 
 In interactive mode, the rate of events per iteration is reported, while in plaintext mode number of iterations and number of events is printed out directly. Time limit for running the benchmark is taking time spent in suspension into account, to make run time predictable. Thus, the way to interpret the output is: 'with_suspend' is equivalent to 'basic' in non-suspended time, thus the time/iteration is very close. However, the suspended activity takes a while, so we had to run fewer iterations overall. 
