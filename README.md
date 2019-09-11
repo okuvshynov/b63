@@ -272,7 +272,6 @@ Main internal data structures are:
 
 ## Next steps:
 - a convenient way to measure outliers. For example, as hash maps usually have amortized O(1) cost for lookup, what does p99 lookup time looks like for some lookup distribution? What can be done to improve?
-- paired t-test for comparison;
 - support CPU perf counters sources beyond Linux perf_events, for example [Intel's PCM](https://github.com/opcm/pcm) and [BSD pmcstat](https://www.freebsd.org/cgi/man.cgi?query=pmcstat).
 - GPU perf counters (at least for Nvidia).
 - [low-pri] disk access and network.
