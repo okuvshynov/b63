@@ -53,8 +53,8 @@ static void b63_print_comparison(b63_benchmark *bm, const char *counter,
     c = d < 0 ? B63_CLR_GREEN : B63_CLR_RED;
     confident = '*';
   }
-  printf("%-30s%-20s:%s%c%6.3lf (%+6.3lf%%)%s\n", bm->name, counter, c,
-         confident, tt->sum_test / tt->n, percentage_diff, B63_CLR_RESET);
+  printf("%-30s%-20s:%s%6.3lf (%+6.3lf%% %c)%s\n", bm->name, counter, c,
+         tt->sum_test / tt->n, percentage_diff, confident, B63_CLR_RESET);
 
   fflush(stdout);
 }

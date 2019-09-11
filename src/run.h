@@ -196,7 +196,7 @@ typedef struct b63_suspension {
 
 /*
  * This is a callback to execute when suspend context gets out of scope.
- * Total number of events during 'suspension loop' is subtracted from 
+ * Total number of events during 'suspension loop' is subtracted from
  * event counter.
  */
 static void b63_suspension_done(b63_suspension *s) {
@@ -212,8 +212,7 @@ static void b63_suspension_done(b63_suspension *s) {
   b63run->suspension_done = 0;                                                 \
   for (b63_suspension b63s __attribute__((cleanup(b63_suspension_done))) =     \
            {                                                                   \
-               .start = b63run->counter->type->read(         \
-                   b63run->counter->impl),                   \
+               .start = b63run->counter->type->read(b63run->counter->impl),    \
               .run = b63run,                                                   \
            };                                                                  \
        b63run->suspension_done == 0; b63run->suspension_done = 1)
