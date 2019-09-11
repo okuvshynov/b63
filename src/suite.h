@@ -26,7 +26,7 @@
 /* Configuration for printing the results. */
 typedef struct b63_printer_config {
   uint8_t plaintext;
-  char separator;
+  char delimiter;
 } b63_printer_config;
 
 /* This is execution state for whole benchmark suite. */
@@ -35,10 +35,11 @@ typedef struct b63_suite {
   b63_benchmark *baseline; /* NULL if no baseline in the suite */
   b63_printer_config printer_config;
 
-  /* this is a weak pointer to the counter executing right now */
-  b63_counter *counter;
   /* full list of counters to run */
   b63_counter_list counter_list;
+
+  /* global seed for whole suite */
+  int64_t seed;
 } b63_suite;
 
 /*
@@ -66,15 +67,19 @@ static void b63_suite_init(b63_suite *suite, int argc, char **argv) {
   suite->counter_list.data = NULL;
   suite->baseline = NULL;
   suite->printer_config.plaintext = 1;
-  suite->printer_config.separator = ',';
+  suite->printer_config.delimiter = ',';
 
-  while ((c = getopt(argc, argv, "it:e:c:s:")) != -1) {
+  while ((c = getopt(argc, argv, "it:e:c:d:s:")) != -1) {
     switch (c) {
     case 'i':
       suite->printer_config.plaintext = 0;
       break;
+    case 'd':
+      /* TODO: rename to delimiter */
+      suite->printer_config.delimiter = optarg[0];
+      break;
     case 's':
-      suite->printer_config.separator = optarg[0];
+      suite->seed = strtoll(optarg, NULL, 10);
       break;
     case 't':
       suite->timelimit_s = atoi(optarg);
