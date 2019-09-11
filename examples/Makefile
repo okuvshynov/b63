@@ -15,27 +15,27 @@
 
 bm_basic:
 	mkdir -p _build/
-	cc -Wall -Wno-unused-function basic.c -I. -O3 -o _build/bm_basic -std=c99
+	cc -Wall -Wno-unused-function basic.c -I. -O3 -o _build/bm_basic -std=c99 -lm
 	./_build/bm_basic -i
 
 bm_suspend:
 	mkdir -p _build/
-	cc -Wall -Wno-unused-function suspend.c -I. -O3 -o _build/bm_suspend -std=c99
+	cc -Wall -Wno-unused-function suspend.c -I. -O3 -o _build/bm_suspend -std=c99 -lm
 	./_build/bm_suspend -i
 
 bm_baseline:
 	mkdir -p _build/
-	cc -Wall -Wno-unused-function baseline.c -I. -O3 -o _build/bm_baseline -std=c99
+	cc -Wall -Wno-unused-function baseline.c -I. -O3 -o _build/bm_baseline -std=c99 -lm
 	./_build/bm_baseline -i
 
 bm_baseline_multi:
 	mkdir -p _build/
-	cc -Wall -Wno-unused-function baseline_multi.c -I. -O3 -o _build/bm_baseline_multi -std=c99
+	cc -Wall -Wno-unused-function baseline_multi.c -I. -O3 -o _build/bm_baseline_multi -std=c99 -lm
 	./_build/bm_baseline_multi -i
 
 bm_custom:
 	mkdir -p _build/
-	cc -Wall -Wno-unused-function custom.c -I. -O3 -o _build/bm_custom -std=c99
+	cc -Wall -Wno-unused-function custom.c -I. -O3 -o _build/bm_custom -std=c99 -lm
 	./_build/bm_custom -i
 
 bm_l1d_miss:
@@ -45,7 +45,7 @@ bm_l1d_miss:
 
 bm_raw:
 	mkdir -p _build/
-	cc -Wall -Wno-unused-function raw.c -I. -O3 -o _build/bm_raw -std=c99
+	cc -Wall -Wno-unused-function raw.c -I. -O3 -o _build/bm_raw -std=c99 -lm
 	./_build/bm_raw -c lpe:r04A1,lpe:r10A1 -i
 
 bm_jemalloc_non_bsd:
