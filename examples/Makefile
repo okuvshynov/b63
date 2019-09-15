@@ -58,6 +58,12 @@ bm_jemalloc_bsd:
 	c++ jemalloc.cpp -O3 -o _build/bm_jemalloc
 	./_build/bm_jemalloc -i
 
+bm_indirect:
+	mkdir -p _build/
+	c++ -Wall -Wno-unused-function indirect.cpp -I. -O3 -o _build/indirect -std=c++17
+	./_build/indirect -i -c time
+
+
 clean:
 	rm -rf _build/
 
