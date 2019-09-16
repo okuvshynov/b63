@@ -36,7 +36,7 @@ B63_BASELINE(sequential, n) {
   int32_t res = 0;
   for (size_t i = 0; i < n; i++) {
     for (size_t j = 0; j < kSize; j++) {
-      res += v[j];
+      res += v[v[j] & kMask];
     }
   }
 
@@ -61,6 +61,6 @@ B63_BENCHMARK(random, n) {
 
 int main(int argc, char **argv) {
   srand(time(0));
-  B63_RUN_WITH("lpe:L1-dcache-load-misses", argc, argv);
+  B63_RUN_WITH("lpe:L1-dcache-load-misses,time", argc, argv);
   return 0;
 }
