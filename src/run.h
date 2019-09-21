@@ -40,6 +40,7 @@ static void b63_epoch_run(b63_epoch *e, int64_t seed) {
   e->events = 0LL;
   e->iterations = 0LL;
   e->suspension_done = 0;
+  e->fail = 0;
 
   int64_t started, done;
   /*
@@ -218,3 +219,11 @@ static void b63_suspension_done(b63_suspension *s) {
        b63run->suspension_done == 0; b63run->suspension_done = 1)
 
 #endif
+
+/*
+ * Sanity check testing. This is not supposed to be a replacement for unit-testing,
+ * but it's important to be able to make sure benchmark produced expected result
+ * if applicable
+ */
+#define B63_ASSERT(c) if (!(c)) { b63run->fail = 1; } 
+

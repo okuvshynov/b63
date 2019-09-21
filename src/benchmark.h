@@ -38,6 +38,7 @@ typedef struct b63_epoch {
   int64_t iterations;
   int64_t events;
   int8_t suspension_done;
+  int8_t fail;
 } b63_epoch;
 
 /*

@@ -18,6 +18,11 @@ bm_basic:
 	cc -Wall -Wno-unused-function basic.c -I. -O3 -o _build/bm_basic -std=c99 -lm
 	./_build/bm_basic -i
 
+bm_assert:
+	mkdir -p _build/
+	cc -Wall -Wno-unused-function assert.c -I. -O3 -o _build/bm_assert -std=c99 -lm
+	./_build/bm_assert -i
+
 bm_suspend:
 	mkdir -p _build/
 	cc -Wall -Wno-unused-function suspend.c -I. -O3 -o _build/bm_suspend -std=c99 -lm
