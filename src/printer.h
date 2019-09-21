@@ -61,6 +61,11 @@ static void b63_print_comparison(b63_benchmark *bm, const char *counter,
 
 static void b63_print_done(b63_epoch *r) {
   /* plaintext output */
+  if (r->fail) {
+    printf("%s%-30s%-20s: assertion fail%s\n", B63_CLR_RED,
+           r->benchmark->name, r->counter->name, B63_CLR_RESET);
+    return;
+  }
   if (r->benchmark->suite->printer_config.plaintext != 0) {
     char d = r->benchmark->suite->printer_config.delimiter;
     printf("%s%c%s%c%" PRId64 "%c%" PRId64 "\n", r->benchmark->name, d,
