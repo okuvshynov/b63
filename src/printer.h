@@ -33,12 +33,22 @@ static void b63_print_individual(b63_benchmark *bm, const char *counter,
   if (bm->suite->printer_config.plaintext != 0) {
     return;
   }
+  if (bm->failed) {
+    printf("%s%-30s%-20s: assertion fail%s\n", B63_CLR_RED,
+           bm->name, counter, B63_CLR_RESET);
+    return;
+  }
   printf("%-30s%-20s: %6.3lf\n", bm->name, counter, tt->sum_test / tt->n);
 }
 
 static void b63_print_comparison(b63_benchmark *bm, const char *counter,
                                  b63_stats *tt) {
   if (bm->suite->printer_config.plaintext != 0) {
+    return;
+  }
+  if (bm->failed) {
+    printf("%s%-30s%-20s: assertion fail%s\n", B63_CLR_RED,
+           bm->name, counter, B63_CLR_RESET);
     return;
   }
   double d = b63_stats_diff(tt);
@@ -61,11 +71,6 @@ static void b63_print_comparison(b63_benchmark *bm, const char *counter,
 
 static void b63_print_done(b63_epoch *r) {
   /* plaintext output */
-  if (r->fail) {
-    printf("%s%-30s%-20s: assertion fail%s\n", B63_CLR_RED,
-           r->benchmark->name, r->counter->name, B63_CLR_RESET);
-    return;
-  }
   if (r->benchmark->suite->printer_config.plaintext != 0) {
     char d = r->benchmark->suite->printer_config.delimiter;
     printf("%s%c%s%c%" PRId64 "%c%" PRId64 "\n", r->benchmark->name, d,

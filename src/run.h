@@ -86,6 +86,10 @@ static void b63_benchmark_run(b63_benchmark *b, b63_counter *c,
     r->benchmark = b;
     r->counter = c;
     b63_epoch_run(r, next_seed);
+    if (r->fail) {
+      b->failed = 1;
+      break;
+    }
     next_seed = 134775853LL * next_seed + 1;
 
     double baseline_rate = 0.0;

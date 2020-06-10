@@ -61,7 +61,8 @@ typedef struct b63_benchmark {
   struct b63_suite *suite;
   /* [weak] pointer to current results. Used ONLY for baseline */
   b63_epoch *results;
-
+  /* if any run has failed; */
+  int8_t failed;
 } b63_benchmark;
 
 #endif
