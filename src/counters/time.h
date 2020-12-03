@@ -16,17 +16,28 @@
 
 #ifndef _B63_COUNTERS_TIME_H_
 #define _B63_COUNTERS_TIME_H_
-
+#ifdef NO_GET_TIME_SUPPORTED
+#include <sys/time.h>
+#else
 #include <time.h>
-
+#endif
 #include "../counter.h"
 
 /* default counter returning time in nanoseconds */
 B63_COUNTER(time) {
+#ifdef NO_GET_TIME_SUPPORTED
+  struct timeval tv;
+
+  if (gettimeofday (&tv, NULL) == 0)
+    return (uint64_t) (tv.tv_sec * 1000000 + tv.tv_usec) * 1000;
+  else
+    return 0;
+#else
   struct timespec t;
   clock_gettime(CLOCK_MONOTONIC, &t);
   int64_t res = 1000000000LL * (int64_t)t.tv_sec + t.tv_nsec;
   return res;
+#endif
 }
 
 #endif
