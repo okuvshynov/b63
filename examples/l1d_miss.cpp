@@ -16,6 +16,7 @@
 
 #include "../src/b63.h"
 #include "../src/counters/perf_events.h"
+#include "../src/counters/osx_kperf.h"
 
 #include <algorithm>
 #include <cstdint>
@@ -61,6 +62,6 @@ B63_BENCHMARK(random, n) {
 
 int main(int argc, char **argv) {
   srand(time(0));
-  B63_RUN_WITH("lpe:L1-dcache-load-misses,time", argc, argv);
+  B63_RUN_WITH("time", argc, argv);
   return 0;
 }
