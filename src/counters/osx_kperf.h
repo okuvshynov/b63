@@ -61,33 +61,50 @@ B63_KPERF_FUNCTIONS
 struct b63_kperf_counter_event_map {
   const char *event_name;
   uint64_t config;
+  uint64_t config_index;
+  uint64_t counter_index;
 } b63_kperf_counter_events_flat_map[] = {
-  {"cycles", 0x02},
-  {"instructions", 0x8c},
-  {"branches", 0x8d},
-  {"L1-dcache-load-misses", 0xbf},
-  {"L1-dcache-store-misses", 0xc0},
-  {"dTLB-load-misses", 0xc1},
-  {"branch-misses", 0xcb},
-  {"L1-icache-load-misses", 0xd3},
-  {"iTLB-load-misses", 0xd4},
+  {"cycles", 0x02, 0, 0},
+  {"instructions", 0x8c, 0, 1},
+  {"branches", 0x8d, 3, 5},
+  {"L1-dcache-load-misses", 0xbf, 3, 5},
+  {"L1-dcache-store-misses", 0xc0, 3, 5},
+  {"dTLB-load-misses", 0xc1, 3, 5},
+  {"branch-misses", 0xcb, 3, 5},
+  {"L1-icache-load-misses", 0xd3, 3, 5},
+  {"iTLB-load-misses", 0xd4, 3, 5},
 };
 
-static uint64_t b63_kperf_pick_event(const char* event_name) {
+typedef struct b63_counter_kperf {
+  uint64_t counters[B63_KPERF_COUNTER_SIZE];
+  uint64_t config[B63_KPERF_CONFIG_SIZE];
+  uint64_t counter_index;
+} b63_counter_kperf;
+
+static uint64_t b63_kperf_pick_event(const char* event_name, b63_counter_kperf* kperf) {
+  /*
+   * Not every position in 'configurable' section works with every counter.
+   * We can configure cycles to any position, but, for example, l1d misses
+   * are not working with positions 0-2. Given that at the moment we record 
+   * one counter at a time anyway, we can always use pos 3 for everything.
+   *
+   * For cycles and instructions, though, we will use fixed counters;
+   */
   for (size_t i = 0; i < sizeof(b63_kperf_counter_events_flat_map) /
                              sizeof(struct b63_kperf_counter_event_map);
        ++i) {
     if (strcmp(b63_kperf_counter_events_flat_map[i].event_name, event_name) == 0) {
-      return b63_kperf_counter_events_flat_map[i].config;
+      printf("%lld %lld\n", b63_kperf_counter_events_flat_map[i].config_index, b63_kperf_counter_events_flat_map[i].counter_index);
+      const uint64_t CFGWORD_EL0A64EN_MASK = 0x20000;
+      kperf->config[b63_kperf_counter_events_flat_map[i].config_index] = b63_kperf_counter_events_flat_map[i].config | CFGWORD_EL0A64EN_MASK;
+      kperf->counter_index = b63_kperf_counter_events_flat_map[i].counter_index;
+
+      return 1;
     }
   }
   return 0;
 }
 
-typedef struct b63_counter_kperf {
-  uint64_t counters[B63_KPERF_COUNTER_SIZE];
-  uint64_t config[B63_KPERF_CONFIG_SIZE];
-} b63_counter_kperf;
 
 static int8_t b63_counter_kperf_create(const char* conf, void **impl) {
   void *kperf = dlopen(
@@ -123,14 +140,11 @@ static int8_t b63_counter_kperf_create(const char* conf, void **impl) {
   }
 
   const char *event_name = conf + strlen("kperf:");
-  uint64_t event = b63_kperf_pick_event(event_name);
-  if (event == 0) {
+  uint64_t found  = b63_kperf_pick_event(event_name, res);
+  if (found == 0) {
     fprintf(stderr, "event %s not found", conf);
     return 0;
   }
-
-  const uint64_t CFGWORD_EL0A64EN_MASK = 0x20000;
-  res->config[4] = event | CFGWORD_EL0A64EN_MASK;
 
   *impl = res;
   return 1;
@@ -138,11 +152,15 @@ static int8_t b63_counter_kperf_create(const char* conf, void **impl) {
 
 static void b63_counter_kperf_cleanup(void* impl) {
   if (impl != NULL) {
-    /* TODO: unload the dl library? */
+    /* 
+     * TODO: unload the dl library?
+     * This should be done on counter-family level though.
+     */
   }
 }
 
-/* this function will be called right before the measurements for 
+/* 
+ * activate function will be called right before the measurements for 
  * this counter. It is needed to support multiple counters from kperf set,
  * for example, both l1d misses and dtlb misses. Apple's kperf doesn't seem to
  * multiplex/maintain internal state, thus we can only configure 
@@ -179,7 +197,7 @@ B63_COUNTER(kperf, b63_counter_kperf_create, b63_counter_kperf_cleanup, b63_coun
   if (kpc_get_thread_counters(0, B63_KPERF_COUNTER_SIZE, kperf->counters)) {
     fprintf(stderr, "kpc_get_thread_counters failed\n");
   }
-  return kperf->counters[4 + 2];
+  return kperf->counters[kperf->counter_index];
 }
 
 #endif
