@@ -222,6 +222,9 @@ $ ./bm_jemalloc -c jemalloc_thread_allocated
 #### Time ("time")
 Default counter, counts microseconds.
 
+#### OS X kperf-based counters
+The prefix is kperf. Currently only measures main thread. For a list of events supported, check https://github.com/okuvshynov/b63/blob/master/src/counters/osx_kperf.h#L67-L75
+
 ## Dependencies and compatibility
 
 B63 requires following C compiler attributes available:
