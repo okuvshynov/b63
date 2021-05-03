@@ -27,7 +27,7 @@
 #endif
 
 /* for CLOCK_MONOTONIC */
-#define _POSIX_C_SOURCE 200809L
+//#define _POSIX_C_SOURCE 200809L
 
 #include "benchmark.h"
 #include "register.h"
