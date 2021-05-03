@@ -46,6 +46,7 @@
 
 typedef int64_t (*b63_counter_read_fn)(void *impl);
 typedef void (*b63_counter_cleanup_fn)(void *impl);
+typedef void (*b63_counter_activate_fn)(void *impl);
 
 /*
  * returns 0 if construction fails. Note that 'NULL' implementation
@@ -67,6 +68,7 @@ typedef struct b63_ctype {
   b63_counter_read_fn read;
   b63_counter_factory_fn factory;
   b63_counter_cleanup_fn cleanup;
+  b63_counter_activate_fn activate;
   const char *prefix;
 } b63_ctype;
 
@@ -85,29 +87,32 @@ typedef struct b63_counter {
 B63_LIST_DECLARE(b63_ctype);
 
 /* Counter registration */
-#define B63_COUNTER_REG(name, f, c)                                            \
+#define B63_COUNTER_REG(name, f, c, a)                                         \
   static int64_t b63_counter_read_##name(void *);                              \
   static b63_ctype b63_ctype_##name = {                                        \
       .read = b63_counter_read_##name,                                         \
       .factory = f,                                                            \
       .cleanup = c,                                                            \
+      .activate = a,                                                           \
       .prefix = #name,                                                         \
   };                                                                           \
   B63_LIST_ADD(b63_ctype, name, &b63_ctype_##name);                            \
   static int64_t b63_counter_read_##name(void *impl)
 
 /* Default registration for stateless counter */
-#define B63_COUNTER_REG_DEFAULT(name)                                          \
-  B63_COUNTER_REG(name, b63_counter_factory_fn_default, NULL)
+#define B63_COUNTER_REG_0(name)                                          \
+  B63_COUNTER_REG(name, b63_counter_factory_fn_default, NULL, NULL)
 
 /* Default registration for counter with trivial state. */
-#define B63_COUNTER_REG_TRIVIAL(name, f) B63_COUNTER_REG(name, f, NULL)
+#define B63_COUNTER_REG_1(name, f) B63_COUNTER_REG(name, f, NULL, NULL)
+
+#define B63_COUNTER_REG_2(name, f, c) B63_COUNTER_REG(name, f, c, NULL)
 
 /* macro 'overloading', so we can just use B63_COUNTER */
-#define B63_COUNTER_GET_REG(_1, _2, _3, IMPL_NAME, ...) IMPL_NAME
+#define B63_COUNTER_GET_REG(_1, _2, _3, _4, IMPL_NAME, ...) IMPL_NAME
 #define B63_COUNTER(...)                                                       \
-  B63_COUNTER_GET_REG(__VA_ARGS__, B63_COUNTER_REG, B63_COUNTER_REG_TRIVIAL,   \
-                      B63_COUNTER_REG_DEFAULT)                                 \
+  B63_COUNTER_GET_REG(__VA_ARGS__, B63_COUNTER_REG, B63_COUNTER_REG_2, B63_COUNTER_REG_1,   \
+                      B63_COUNTER_REG_0)                                 \
   (__VA_ARGS__)
 
 /* deallocates name and impl if provided. */

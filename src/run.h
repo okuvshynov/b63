@@ -124,6 +124,9 @@ static void b63_suite_run(b63_suite *suite) {
   b63_epoch *baseline_results = NULL;
 
   B63_FOR_EACH_COUNTER(suite->counter_list, counter) {
+    if (counter->type->activate != NULL) {
+      counter->type->activate(counter->impl);
+    }
     if (suite->baseline != NULL) {
       baseline_results = (b63_epoch *)malloc(suite->epochs * sizeof(b63_epoch));
       suite->baseline->results = baseline_results;

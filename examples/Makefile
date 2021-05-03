@@ -48,6 +48,11 @@ bm_l1d_miss:
 	c++ -Wall -Wno-unused-function l1d_miss.cpp -I. -O3 -o _build/bm_l1d_miss -std=c++17
 	./_build/bm_l1d_miss -i -c lpe:L1-dcache-load-misses,time
 
+bm_l1d_miss_osx:
+	mkdir -p _build/
+	c++ -Wall -Wno-unused-function l1d_miss.cpp -I. -O3 -o _build/bm_l1d_miss -std=c++17
+	sudo ./_build/bm_l1d_miss -i -c kperf:L1-dcache-load-misses,time,kperf:cycles
+
 bm_raw:
 	mkdir -p _build/
 	cc -Wall -Wno-unused-function raw.c -I. -O3 -o _build/bm_raw -std=c99 -lm
