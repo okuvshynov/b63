@@ -94,7 +94,6 @@ static uint64_t b63_kperf_pick_event(const char* event_name, b63_counter_kperf* 
                              sizeof(struct b63_kperf_counter_event_map);
        ++i) {
     if (strcmp(b63_kperf_counter_events_flat_map[i].event_name, event_name) == 0) {
-      printf("%lld %lld\n", b63_kperf_counter_events_flat_map[i].config_index, b63_kperf_counter_events_flat_map[i].counter_index);
       const uint64_t CFGWORD_EL0A64EN_MASK = 0x20000;
       kperf->config[b63_kperf_counter_events_flat_map[i].config_index] = b63_kperf_counter_events_flat_map[i].config | CFGWORD_EL0A64EN_MASK;
       kperf->counter_index = b63_kperf_counter_events_flat_map[i].counter_index;
