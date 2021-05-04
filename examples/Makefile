@@ -48,6 +48,11 @@ bm_l1d_miss:
 	c++ -Wall -Wno-unused-function l1d_miss.cpp -I. -O3 -o _build/bm_l1d_miss -std=c++17
 	./_build/bm_l1d_miss -i -c lpe:L1-dcache-load-misses,time
 
+bm_storms:
+	mkdir -p _build/
+	clang++ -Wall -Wno-unused-function storms.cpp -I. -O3 -o _build/storms -std=c++17 
+	sudo ./_build/storms -i -c kperf:L1-dcache-load-misses,time,kperf:cycles,kperf:instructions
+
 bm_l1d_miss_osx2:
 	mkdir -p _build/
 	clang++ -Wall -Wno-unused-function l1d_miss2.cpp -I. -O3 -o _build/bm_l1d_miss -std=c++17 
