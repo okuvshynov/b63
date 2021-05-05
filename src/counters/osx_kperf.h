@@ -55,6 +55,9 @@ B63_KPERF_FUNCTIONS
 #define KPC_CLASS_CONFIGURABLE_MASK (1u << KPC_CLASS_CONFIGURABLE)
 #define KPC_MASK (KPC_CLASS_CONFIGURABLE_MASK | KPC_CLASS_FIXED_MASK)
 
+/*
+ * For now this supports only M1 CPU.
+ */
 #define B63_KPERF_COUNTER_SIZE 10
 #define B63_KPERF_CONFIG_SIZE 8
 
@@ -123,13 +126,13 @@ static int8_t b63_counter_kperf_create(const char* conf, void **impl) {
 #undef F
 
   if (kpc_get_counter_count(KPC_MASK) != B63_KPERF_COUNTER_SIZE) {
-    printf("wrong fixed counters count\n");
-    return -1;
+    fprintf(stderr, "wrong fixed counters count\n");
+    return 0;
   }
 
   if (kpc_get_config_count(KPC_MASK) != B63_KPERF_CONFIG_SIZE) {
-    printf("wrong fixed config count\n");
-    return -1;
+    fprintf(stderr, "wrong fixed config count\n");
+    return 0;
   }
 
   b63_counter_kperf *res = (b63_counter_kperf *)malloc(sizeof(b63_counter_kperf));
@@ -142,6 +145,7 @@ static int8_t b63_counter_kperf_create(const char* conf, void **impl) {
   uint64_t found  = b63_kperf_pick_event(event_name, res);
   if (found == 0) {
     fprintf(stderr, "event %s not found", conf);
+    free(res);
     return 0;
   }
 
