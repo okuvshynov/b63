@@ -16,6 +16,10 @@ struct A {
     int64_t payload;
 };
 
+constexpr bool is_pow2(int a) {
+    return a && ((a & (a - 1)) == 0);
+}
+
 struct Test {
     Test(int64_t len, int64_t rep) : rep_(rep * len) {
         l.resize(len);
@@ -36,9 +40,12 @@ struct Test {
         });
     }
     
+    template<int unroll=2>
     int64_t run() {
+        static_assert(is_pow2(unroll), "unroll factor must be power of 2");
         A* curr = &l[0];
         int64_t res = 0;
+        #pragma clang loop unroll_count(unroll)
         for (int64_t r = 0; r < rep_; r++) {
             curr = curr->next;
             if (curr->payload % 3 == 0) {
@@ -48,29 +55,6 @@ struct Test {
         return res;
     }
 
-    int64_t run_unrolled() {
-        A* curr = &l[0];
-        int64_t res = 0;
-        for (int64_t r = 0; r < rep_; r += 4) {
-            curr = curr->next;
-            if (curr->payload % 3 == 0) {
-              res += curr->payload;
-            }
-            curr = curr->next;
-            if (curr->payload % 3 == 0) {
-              res += curr->payload;
-            }
-            curr = curr->next;
-            if (curr->payload % 3 == 0) {
-              res += curr->payload;
-            }
-            curr = curr->next;
-            if (curr->payload % 3 == 0) {
-              res += curr->payload;
-            }
-        }
-        return res;
-    }
     private:
         std::vector<A> l;
         int64_t rep_;
@@ -78,65 +62,34 @@ struct Test {
 
 const size_t kSize = (1 << 10);
 
-B63_BENCHMARK(icestorm, n) {
-  pthread_set_qos_class_self_np(QOS_CLASS_BACKGROUND, 0);
-  Test* t;
-  B63_SUSPEND {
-    t = new Test(kSize, n);
+#define BM_UNROLLED(name, qos, unroll) \
+  B63_BENCHMARK(name##_u##unroll, n) {                        \
+    pthread_set_qos_class_self_np(qos, 0);\
+    Test* t;                                                     \
+    B63_SUSPEND {                                                \
+      t = new Test(kSize, n);                                    \
+    }                                                            \
+    int64_t res = t->run<unroll>();                         \
+    B63_KEEP(res);    \
+    B63_SUSPEND { \
+      delete t; \
+    }\
   }
 
-  int64_t res = t->run();
+#define FIRESTORM_UNROLLED(unroll) BM_UNROLLED(firestorm, QOS_CLASS_USER_INTERACTIVE, unroll)
+#define ICESTORM_UNROLLED(unroll) BM_UNROLLED(icestorm, QOS_CLASS_BACKGROUND, unroll)
 
-  B63_KEEP(res);
-  B63_SUSPEND {
-    delete t;
-  }
-}
+FIRESTORM_UNROLLED(1)
+FIRESTORM_UNROLLED(2)
+FIRESTORM_UNROLLED(4)
+FIRESTORM_UNROLLED(8)
+FIRESTORM_UNROLLED(16)
 
-B63_BENCHMARK(icestorm_unrolled, n) {
-  pthread_set_qos_class_self_np(QOS_CLASS_BACKGROUND, 0);
-  Test* t;
-  B63_SUSPEND {
-    t = new Test(kSize, n);
-  }
-
-  int64_t res = t->run_unrolled();
-
-  B63_KEEP(res);
-  B63_SUSPEND {
-    delete t;
-  }
-}
-
-B63_BASELINE(firestorm, n) {
-  pthread_set_qos_class_self_np(QOS_CLASS_USER_INTERACTIVE, 0);
-  Test* t;
-  B63_SUSPEND {
-    t = new Test(kSize, n);
-  }
-
-  int64_t res = t->run();
-
-  B63_KEEP(res);
-  B63_SUSPEND {
-    delete t;
-  }
-}
-
-B63_BENCHMARK(firestorm_unrolled, n) {
-  pthread_set_qos_class_self_np(QOS_CLASS_USER_INTERACTIVE, 0);
-  Test* t;
-  B63_SUSPEND {
-    t = new Test(kSize, n);
-  }
-
-  int64_t res = t->run_unrolled();
-
-  B63_KEEP(res);
-  B63_SUSPEND {
-    delete t;
-  }
-}
+ICESTORM_UNROLLED(1)
+ICESTORM_UNROLLED(2)
+ICESTORM_UNROLLED(4)
+ICESTORM_UNROLLED(8)
+ICESTORM_UNROLLED(16)
 
 int main(int argc, char **argv) {
   srand(time(0));
