@@ -51,7 +51,7 @@ bm_l1d_miss:
 bm_storms:
 	mkdir -p _build/
 	clang++ -Wall -Wno-unused-function storms.cpp -I. -O3 -o _build/storms -std=c++17 
-	sudo ./_build/storms -i -c kperf:L1-dcache-load-misses,time,kperf:cycles,kperf:instructions
+	sudo ./_build/storms -i -c time,kperf:cycles,kperf:instructions
 
 bm_l1d_miss_osx2:
 	mkdir -p _build/
