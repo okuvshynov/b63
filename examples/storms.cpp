@@ -62,34 +62,42 @@ struct Test {
 
 const size_t kSize = (1 << 10);
 
-#define BM_UNROLLED(name, qos, unroll) \
-  B63_BENCHMARK(name##_u##unroll, n) {                        \
-    pthread_set_qos_class_self_np(qos, 0);\
-    Test* t;                                                     \
-    B63_SUSPEND {                                                \
-      t = new Test(kSize, n);                                    \
-    }                                                            \
-    int64_t res = t->run<unroll>();                         \
-    B63_KEEP(res);    \
-    B63_SUSPEND { \
-      delete t; \
-    }\
+#define BM_UNROLLED(name, qos, unroll)     \
+  B63_BENCHMARK(name##_u##unroll, n) {     \
+    pthread_set_qos_class_self_np(qos, 0); \
+    Test* t;                               \
+    B63_SUSPEND {                          \
+      t = new Test(kSize, n);              \
+    }                                      \
+    int64_t res = t->run<unroll>();        \
+    B63_KEEP(res);                         \
+    B63_SUSPEND {                          \
+      delete t;                            \
+    }                                      \
   }
 
-#define FIRESTORM_UNROLLED(unroll) BM_UNROLLED(firestorm, QOS_CLASS_USER_INTERACTIVE, unroll)
-#define ICESTORM_UNROLLED(unroll) BM_UNROLLED(icestorm, QOS_CLASS_BACKGROUND, unroll)
+#define FIRESTORM_UNROLLED(unroll)         \
+  BM_UNROLLED(firestorm, QOS_CLASS_USER_INTERACTIVE, unroll)
+#define ICESTORM_UNROLLED(unroll)          \
+  BM_UNROLLED(icestorm, QOS_CLASS_BACKGROUND, unroll)
 
 FIRESTORM_UNROLLED(1)
 FIRESTORM_UNROLLED(2)
 FIRESTORM_UNROLLED(4)
 FIRESTORM_UNROLLED(8)
 FIRESTORM_UNROLLED(16)
+FIRESTORM_UNROLLED(32)
+FIRESTORM_UNROLLED(64)
+FIRESTORM_UNROLLED(128)
 
 ICESTORM_UNROLLED(1)
 ICESTORM_UNROLLED(2)
 ICESTORM_UNROLLED(4)
 ICESTORM_UNROLLED(8)
 ICESTORM_UNROLLED(16)
+ICESTORM_UNROLLED(32)
+ICESTORM_UNROLLED(64)
+ICESTORM_UNROLLED(128)
 
 int main(int argc, char **argv) {
   srand(time(0));
