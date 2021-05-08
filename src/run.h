@@ -218,7 +218,7 @@ static void b63_suspension_done(b63_suspension *s) {
  */
 #define B63_SUSPEND                                                            \
   b63run->suspension_done = 0;                                                 \
-  for (b63_suspension b63s __attribute__((cleanup(b63_suspension_done))) =     \
+  for (b63_suspension b63s __attribute__((unused, cleanup(b63_suspension_done))) =     \
            {                                                                   \
                .start = b63run->counter->type->read(b63run->counter->impl),    \
               .run = b63run,                                                   \
