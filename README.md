@@ -19,8 +19,8 @@ run benchmarks from examples/ folder. The library is header-only, so examples on
 This is how benchmarking time, cpu cycles and cache misses might look like on Linux:
 
 ```cpp
-#include "../src/b63.h"
-#include "../src/counters/perf_events.h"
+#include "../include/b63/b63.h"
+#include "../include/b63/counters/perf_events.h"
 #include <algorithm>
 #include <cstdint>
 #include <cstdlib>
@@ -173,7 +173,7 @@ For now following counters are implemented:
 
 ### Notes for building custom counters:
 Counters are expected to be additive and monotonic;
-Implementation of the counting and suspension lives in [src/run.h](src/run.h); [examples/custom.c](examples/custom.c) is a simple case of custom counter definition. All counters shipped with the library can be used as examples, as they do not rely on anything internal from b63. 
+Implementation of the counting and suspension lives in [include/b63/run.h](include/b63/run.h); [examples/custom.c](examples/custom.c) is a simple case of custom counter definition. All counters shipped with the library can be used as examples, as they do not rely on anything internal from b63. 
 
 Counters header files should be included from benchmark c/cpp file directly; only default timer counter is included from
 b63 itself. It is done to avoid having an insane amount of ifdefs in the code and compilicated build rules, as counters have to be gated by compiler/os/libraries installed and used.
@@ -223,7 +223,7 @@ $ ./bm_jemalloc -c jemalloc_thread_allocated
 Default counter, counts microseconds.
 
 #### OS X kperf-based counters
-The prefix is kperf. Currently only measures main thread. For a list of events supported, check https://github.com/okuvshynov/b63/blob/master/src/counters/osx_kperf.h#L67-L75
+The prefix is kperf. Currently only measures main thread. For a list of events supported, check https://github.com/okuvshynov/b63/blob/master/include/b63/counters/osx_kperf.h#L67-L75
 
 ## Dependencies and compatibility
 

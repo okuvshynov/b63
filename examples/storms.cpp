@@ -1,5 +1,5 @@
-#include "../src/b63.h"
-#include "../src/counters/osx_kperf.h"
+#include "../include/b63/b63.h"
+#include "../include/b63/counters/osx_kperf.h"
 
 #include <algorithm>
 #include <cstdint>
@@ -55,6 +55,27 @@ struct Test {
         return res;
     }
 
+    template<int unroll=2>
+    int64_t run2() {
+        static_assert(is_pow2(unroll), "unroll factor must be power of 2");
+        A* curr = &l[0];
+        int64_t res = 0;
+        #pragma clang loop unroll_count(unroll)
+        for (int64_t r = 0; r < rep_; r++) {
+            curr = curr->next;
+            if (curr->payload % 3 == 0) {
+              res += curr->payload;
+            }
+            if (curr->payload % 7 == 0) {
+              res += curr->payload;
+            }
+            if (curr->payload % 11 == 0) {
+              res += curr->payload;
+            }
+        }
+        return res;
+    }
+
     private:
         std::vector<A> l;
         int64_t rep_;
@@ -69,7 +90,7 @@ const size_t kSize = (1 << 10);
     B63_SUSPEND {                          \
       t = new Test(kSize, n);              \
     }                                      \
-    int64_t res = t->run<unroll>();        \
+    int64_t res = t->run2<unroll>();        \
     B63_KEEP(res);                         \
     B63_SUSPEND {                          \
       delete t;                            \

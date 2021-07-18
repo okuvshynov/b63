@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#include "../src/counters/jemalloc.h"
-#include "../src/b63.h"
+#include "../include/b63/counters/jemalloc.h"
+#include "../include/b63/b63.h"
 
 #include <algorithm>
 #include <cstdint>

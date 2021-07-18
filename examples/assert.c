@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "../src/b63.h"
+#include "../include/b63/b63.h"
 
 #include "math.h"
 

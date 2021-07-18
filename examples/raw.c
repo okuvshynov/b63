@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#include "../src/b63.h"
-#include "../src/counters/perf_events.h"
+#include "../include/b63/b63.h"
+#include "../include/b63/counters/perf_events.h"
 
 #include <stdint.h>
 #include <stdlib.h>
