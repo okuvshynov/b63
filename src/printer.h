@@ -73,8 +73,9 @@ static void b63_print_done(b63_epoch *r) {
   /* plaintext output */
   if (r->benchmark->suite->printer_config.plaintext != 0) {
     char d = r->benchmark->suite->printer_config.delimiter;
-    printf("%s%c%s%c%" PRId64 "%c%" PRId64 "\n", r->benchmark->name, d,
-           r->counter->name, d, r->iterations, d, r->events);
+    printf("%s%c%s%c%" PRId64 "%c%" PRId64 "%c%lf\n", r->benchmark->name, d,
+           r->counter->name, d, r->iterations, d, r->events, d,
+           1.0 * r->events / r->iterations);
     fflush(stdout);
   }
 }
