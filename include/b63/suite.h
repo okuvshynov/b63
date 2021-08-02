@@ -62,7 +62,7 @@ static void b63_suite_init(b63_suite *suite, int argc, char **argv) {
 
   /* default values */
   suite->timelimit_s = 1;
-  suite->epochs = 5;
+  suite->epochs = 30;
   suite->counter_list.size = 0;
   suite->counter_list.data = NULL;
   suite->baseline = NULL;
