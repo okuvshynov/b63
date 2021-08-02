@@ -101,6 +101,10 @@ static void b63_benchmark_run(b63_benchmark *b, b63_counter *c,
     b63_stats_add(1.0 * r->events / r->iterations, baseline_rate, &tt);
   }
   if (baseline_result != NULL) {
+    int32_t needed_samples = b63_power_estimate(&tt);
+    if (needed_samples > suite->epochs) {
+      printf("power analysis suggestions: run for %d epochs\n", needed_samples);
+    }
     b63_print_comparison(b, c->name, &tt);
   } else {
     b63_print_individual(b, c->name, &tt);

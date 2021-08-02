@@ -30,6 +30,7 @@
 typedef struct b63_stats {
   int64_t n;
   double sum_base, sum_test;
+  double sum_base2, sum_test2;
   double sum;
   double sum_squared;
 } b63_stats;
@@ -42,6 +43,8 @@ void b63_stats_init(b63_stats *stats) {
   stats->sum = 0.0;
   stats->sum_base = 0.0;
   stats->sum_test = 0.0;
+  stats->sum_base2 = 0.0;
+  stats->sum_test2 = 0.0;
   stats->sum_squared = 0.0;
 }
 
@@ -51,6 +54,8 @@ void b63_stats_init(b63_stats *stats) {
 void b63_stats_add(double test, double base, b63_stats *stats) {
   stats->sum_base += base;
   stats->sum_test += test;
+  stats->sum_base2 += base * base;
+  stats->sum_test2 += test * test;
   double diff = test - base;
   stats->sum += diff;
   stats->sum_squared += diff * diff;
@@ -92,6 +97,22 @@ double b63_stats_ttest(b63_stats *stats) {
   double ssq = stats->sum_squared;
 
   return sqrtl((n * s * s - s * s) / (n * ssq - s * s));
+}
+
+/* how many epochs do we need to get 80% power @ 95% confidence */
+int32_t b63_power_estimate(b63_stats *stats) {
+  double n = stats->n;
+  /* assume 'equal' sd. not nesessarily true; */
+  double s1 = (stats->sum_base2 - stats->sum_base * stats->sum_base / n ) / (n - 1);
+  double s2 = (stats->sum_test2 - stats->sum_test * stats->sum_test / n ) / (n - 1);
+  double pooled_sd2 = (s1 + s2) / 2;
+  double es2 = (stats->sum / n) * (stats->sum / n) / pooled_sd2;
+
+  /* assume 95% interval and 80% power */
+  double Z97_5 = 1.96;
+  double Z80 = 0.84;
+  double N = 2.0 * (Z97_5 + Z80) * (Z97_5 + Z80) / es2;
+  return ceil(N);
 }
 
 #endif
