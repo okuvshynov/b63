@@ -6,6 +6,10 @@
 #ifdef __APPLE__
 #ifdef __ARM64_ARCH_8__
 
+/*
+ * based on the test on icestorm core, this looks proportional
+ * to time, not to cycles.
+ */
 B63_COUNTER(cycles) {
   uint64_t res;
   __asm__ volatile("mrs %0, cntvct_el0" : "=r" (res));
