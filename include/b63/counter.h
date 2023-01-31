@@ -144,6 +144,7 @@ int8_t b63_counter_init(b63_counter *counter, const char *b, const char *e) {
         return 0;
       }
       memcpy(counter->name, b, e - b);
+      counter->name[e - b] = '\0';
       if (!(*type)->factory(counter->name, &counter->impl)) {
         /* implementation construction fails */
         fprintf(stderr, "counter implementation construction fails for %s\n",
