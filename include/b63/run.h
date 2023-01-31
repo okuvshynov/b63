@@ -122,14 +122,16 @@ static void b63_suite_run(b63_suite *suite) {
 
   b63_epoch *results = (b63_epoch *)malloc(suite->epochs * sizeof(b63_epoch));
   b63_epoch *baseline_results = NULL;
+  if (suite->baseline != NULL) {
+    baseline_results = (b63_epoch *)malloc(suite->epochs * sizeof(b63_epoch));
+    suite->baseline->results = baseline_results;
+  }
 
   B63_FOR_EACH_COUNTER(suite->counter_list, counter) {
     if (counter->type->activate != NULL) {
       counter->type->activate(counter->impl);
     }
     if (suite->baseline != NULL) {
-      baseline_results = (b63_epoch *)malloc(suite->epochs * sizeof(b63_epoch));
-      suite->baseline->results = baseline_results;
       b63_benchmark_run(suite->baseline, counter, baseline_results);
     }
     B63_LIST_FOR_EACH(b63_benchmark, b) {
