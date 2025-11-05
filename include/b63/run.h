@@ -90,7 +90,7 @@ static void b63_benchmark_run(b63_benchmark *b, b63_counter *c,
       b->failed = 1;
       break;
     }
-    next_seed = 134775853LL * next_seed + 1;
+    next_seed = 134775853ULL * next_seed + 1;
 
     double baseline_rate = 0.0;
     if (baseline_result != NULL) {
@@ -234,5 +234,5 @@ static void b63_suspension_done(b63_suspension *s) {
  * but it's important to be able to make sure benchmark produced expected result
  * if applicable
  */
-#define B63_ASSERT(c) if (!(c)) { b63run->fail = 1; } 
+#define B63_ASSERT(c) if (!(c)) { b63run->fail = 1; }
 
